@@ -60,6 +60,10 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
         uint128 lastId;
         uint24 minRequestDuration;
         mapping(uint256 => RedeemRequestInfo) idToRequest;
+        // Optional: maximum allowed share price age for execution (seconds)
+        uint24 maxSharePriceAge;
+        // Optional: minimum redeem shares amount per request to avoid dust
+        uint128 minRedeemShares;
     }
 
     function __getRedeemQueueStorage() private pure returns (RedeemQueueStorage storage $) {
@@ -74,6 +78,10 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
     //==================================================================================================================
 
     event RedeemMinRequestDurationSet(uint24 minRequestDuration);
+
+    event RedeemMaxSharePriceAgeSet(uint24 maxSharePriceAge);
+
+    event RedeemMinSharesSet(uint128 minRedeemShares);
 
     //==================================================================================================================
     // Errors
@@ -112,6 +120,20 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
         emit RedeemMinRequestDurationSet({minRequestDuration: _minRequestDuration});
     }
 
+    /// @notice Sets the maximum allowed staleness of share price used during execution
+    function setRedeemMaxSharePriceAge(uint24 _maxSharePriceAge) external onlyAdminOrOwner {
+        __getRedeemQueueStorage().maxSharePriceAge = _maxSharePriceAge;
+
+        emit RedeemMaxSharePriceAgeSet({maxSharePriceAge: _maxSharePriceAge});
+    }
+
+    /// @notice Sets the minimum redeem shares amount per request
+    function setRedeemMinShares(uint128 _minRedeemShares) external onlyAdminOrOwner {
+        __getRedeemQueueStorage().minRedeemShares = _minRedeemShares;
+
+        emit RedeemMinSharesSet({minRedeemShares: _minRedeemShares});
+    }
+
     //==================================================================================================================
     // Required: IERC7540LikeRedeemHandler
     //==================================================================================================================
@@ -148,6 +170,10 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
         require(_owner == msg.sender, ERC7540LikeRedeemQueue__RequestRedeem__OwnerNotSender());
         require(_owner == _controller, ERC7540LikeRedeemQueue__RequestRedeem__OwnerNotController());
         require(_shares > 0, ERC7540LikeRedeemQueue__RequestRedeem__ZeroShares());
+        uint128 minShares = __getRedeemQueueStorage().minRedeemShares;
+        if (minShares > 0) {
+            require(_shares >= minShares, ERC7540LikeRedeemQueue__RequestRedeem__ZeroShares());
+        }
 
         uint40 canCancelTime = uint40(block.timestamp + getRedeemMinRequestDuration());
 
@@ -180,7 +206,11 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
         Shares shares = Shares(__getShares());
         IFeeHandler feeHandler = IFeeHandler(shares.getFeeHandler());
         ValuationHandler valuationHandler = ValuationHandler(shares.getValuationHandler());
-        (uint256 sharePriceInValueAsset,) = valuationHandler.getSharePrice();
+        (uint256 sharePriceInValueAsset, uint256 priceTimestamp) = valuationHandler.getSharePrice();
+        uint24 maxPriceAge = __getRedeemQueueStorage().maxSharePriceAge;
+        if (maxPriceAge > 0) {
+            require(block.timestamp - priceTimestamp <= maxPriceAge, "STALE_SHARE_PRICE");
+        }
 
         // Fulfill requests
         for (uint256 i; i < _requestIds.length; i++) {
@@ -201,7 +231,15 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
                 _sharesAmount: request.sharesAmount - feeSharesAmount
             });
             uint256 userAssets = valuationHandler.convertValueToAssetAmount({_value: valueDue, _asset: asset()});
-            require(userAssets > 0, ERC7540LikeRedeemQueue__ExecuteRedeemRequests__ZeroAssets());
+            if (userAssets == 0) {
+                // Skip dust redemption; simply refund shares back to the user
+                shares.authTransfer({
+                    _to: request.controller,
+                    _amount: request.sharesAmount
+                });
+                emit RedeemRequestCanceled({requestId: requestId});
+                continue;
+            }
 
             // Burn gross shares held by this contract
             shares.burnFor({_from: address(this), _sharesAmount: request.sharesAmount});
@@ -249,5 +287,15 @@ contract ERC7540LikeRedeemQueue is IERC7540LikeRedeemHandler, ERC7540LikeIssuanc
     /// @notice Returns the redeem request for a given id
     function getRedeemRequest(uint256 _requestId) public view returns (RedeemRequestInfo memory) {
         return __getRedeemQueueStorage().idToRequest[_requestId];
+    }
+
+    /// @notice Returns the maximum allowed share price age used during execution
+    function getRedeemMaxSharePriceAge() public view returns (uint24) {
+        return __getRedeemQueueStorage().maxSharePriceAge;
+    }
+
+    /// @notice Returns the minimum redeem shares amount per request
+    function getRedeemMinShares() public view returns (uint128) {
+        return __getRedeemQueueStorage().minRedeemShares;
     }
 }

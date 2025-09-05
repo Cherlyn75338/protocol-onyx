@@ -30,7 +30,7 @@ library ValueHelpersLib {
         pure
         returns (uint256 sharesAmount_)
     {
-        return (SHARES_PRECISION * _value) / _valuePerShare;
+        return Math.mulDiv(SHARES_PRECISION, _value, _valuePerShare);
     }
 
     function calcValueOfSharesAmount(uint256 _valuePerShare, uint256 _sharesAmount)
@@ -38,7 +38,7 @@ library ValueHelpersLib {
         pure
         returns (uint256 value_)
     {
-        return (_valuePerShare * _sharesAmount) / SHARES_PRECISION;
+        return Math.mulDiv(_valuePerShare, _sharesAmount, SHARES_PRECISION);
     }
 
     function calcValuePerShare(uint256 _totalValue, uint256 _totalSharesAmount)
@@ -46,7 +46,7 @@ library ValueHelpersLib {
         pure
         returns (uint256 valuePerShare_)
     {
-        return (SHARES_PRECISION * _totalValue) / _totalSharesAmount;
+        return Math.mulDiv(SHARES_PRECISION, _totalValue, _totalSharesAmount);
     }
 
     /// @dev Converts a base amount into a target (quote) amount, using a known rate.
@@ -61,10 +61,16 @@ library ValueHelpersLib {
     ) internal pure returns (uint256 quoteAmount_) {
         if (_rateQuotedInBase) {
             // case: base asset-quoted rate
-            return Math.mulDiv(_baseAmount * _ratePrecision, _quotePrecision, (_rate * _basePrecision));
+            // quoteAmount = baseAmount * (ratePrecision * quotePrecision) / (rate * basePrecision)
+            uint256 num = _ratePrecision * _quotePrecision;
+            uint256 den = _rate * _basePrecision;
+            return Math.mulDiv(_baseAmount, num, den);
         } else {
             // case: quote asset-quoted rate
-            return Math.mulDiv(_baseAmount * _rate, _quotePrecision, (_ratePrecision * _basePrecision));
+            // quoteAmount = baseAmount * (rate * quotePrecision) / (ratePrecision * basePrecision)
+            uint256 num = _rate * _quotePrecision;
+            uint256 den = _ratePrecision * _basePrecision;
+            return Math.mulDiv(_baseAmount, num, den);
         }
     }
 
