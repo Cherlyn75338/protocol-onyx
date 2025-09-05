@@ -73,5 +73,80 @@ contract FeeHandlerArbitraryWithdrawTest is Test {
         assertEq(IERC20(address(victimAsset)).balanceOf(address(shares)), victimSeed - drainAmount);
         assertEq(IERC20(address(victimAsset)).balanceOf(attacker), drainAmount);
     }
+
+    function test_feeAsset_config_doesNotRestrict_withdrawals() public {
+        // Setup tokens
+        MockERC20 feeAsset = new MockERC20(18);
+        MockERC20 victimAsset = new MockERC20(18);
+
+        // Seed balances to Shares
+        uint256 victimSeed = 2_000e18;
+        uint256 feeSeed = 1_000e18;
+        victimAsset.mintTo(address(shares), victimSeed);
+        feeAsset.mintTo(address(shares), feeSeed);
+
+        // Deploy fee handler and set it
+        FeeHandlerHarness mal = new FeeHandlerHarness(address(shares));
+        vm.prank(admin);
+        shares.setFeeHandler(address(mal));
+
+        // Explicitly set feeAsset to feeAsset token
+        vm.prank(admin);
+        mal.setFeeAsset(address(feeAsset));
+
+        // Attempt to withdraw the victimAsset anyway
+        address receiver = makeAddr("receiver");
+        uint256 amount = 1_111e18;
+
+        vm.prank(address(mal));
+        shares.withdrawAssetTo({_asset: address(victimAsset), _to: receiver, _amount: amount});
+
+        // Assert drain succeeded despite feeAsset configuration
+        assertEq(IERC20(address(victimAsset)).balanceOf(address(shares)), victimSeed - amount);
+        assertEq(IERC20(address(victimAsset)).balanceOf(receiver), amount);
+        // feeAsset untouched
+        assertEq(IERC20(address(feeAsset)).balanceOf(address(shares)), feeSeed);
+    }
+
+    function testFuzz_feeHandler_withdrawArbitraryAsset(uint256 selector, uint256 amountSeed) public {
+        // Create a small set of assets and seed balances
+        MockERC20 assetA = new MockERC20(18);
+        MockERC20 assetB = new MockERC20(6);
+        MockERC20 assetC = new MockERC20(18);
+
+        MockERC20[3] memory assets = [assetA, assetB, assetC];
+
+        // Seed varying balances
+        uint256 balA = 5_000e18;
+        uint256 balB = 2_000e6; // 6 decimals
+        uint256 balC = 123_456e18;
+        assetA.mintTo(address(shares), balA);
+        assetB.mintTo(address(shares), balB);
+        assetC.mintTo(address(shares), balC);
+
+        // Set up the fee handler
+        FeeHandlerHarness mal = new FeeHandlerHarness(address(shares));
+        vm.prank(admin);
+        shares.setFeeHandler(address(mal));
+
+        // Pick an asset via selector
+        uint256 idx = selector % assets.length;
+        MockERC20 target = assets[idx];
+
+        // Bound amount to Shares balance
+        uint256 sharesBal = IERC20(address(target)).balanceOf(address(shares));
+        if (sharesBal == 0) return;
+        uint256 amount = bound(amountSeed, 1, sharesBal);
+
+        address receiver = makeAddr("fuzzReceiver");
+
+        // Execute withdrawal from fee handler address
+        vm.prank(address(mal));
+        shares.withdrawAssetTo({_asset: address(target), _to: receiver, _amount: amount});
+
+        // Assert
+        assertEq(IERC20(address(target)).balanceOf(address(shares)), sharesBal - amount);
+        assertEq(IERC20(address(target)).balanceOf(receiver), amount);
+    }
 }
 
