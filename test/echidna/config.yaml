@@ -1,0 +1,10 @@
+testMode: property
+estimateGas: true
+format: text
+seqLen: 20
+shrinkLimit: 10000
+cryticArgs: ["--solc-remaps", "src=src"]
+corpusDir: test/echidna/corpus
+testLimit: 20000
+contract: EchidnaHarness
+
