@@ -550,6 +550,33 @@ contract FeeHandlerTest is Test, FeeHandlerTestHelpers {
         }
     }
 
+    function test_fee_rounding_direction_small_amounts() public {
+        // Set a fee of 1 bps
+        uint16 feeBps = 1; // 0.01%
+        vm.prank(admin);
+        feeHandler.setEntranceFee({_feeBps: feeBps, _recipient: makeAddr("feeRecipient")});
+
+        // Caller must be a deposit handler
+        address depositCaller = makeAddr("depositCaller");
+        vm.prank(admin);
+        shares.addDepositHandler({_handler: depositCaller});
+
+        // Mock share price
+        shares_mockSharePrice({_shares: address(shares), _sharePrice: 1e18, _timestamp: block.timestamp});
+
+        // Gross shares = 99 wei -> fee = floor(99 * 1 / 10000) = 0
+        uint256 grossSmall = 99;
+        vm.prank(depositCaller);
+        uint256 feeSmall = feeHandler.settleEntranceFeeGivenGrossShares({_grossSharesAmount: grossSmall});
+        assertEq(feeSmall, 0);
+
+        // Gross shares = 10000 wei -> fee = 1
+        uint256 grossEdge = 10000;
+        vm.prank(depositCaller);
+        uint256 feeEdge = feeHandler.settleEntranceFeeGivenGrossShares({_grossSharesAmount: grossEdge});
+        assertEq(feeEdge, 1);
+    }
+
     //==================================================================================================================
     // Helpers
     //==================================================================================================================

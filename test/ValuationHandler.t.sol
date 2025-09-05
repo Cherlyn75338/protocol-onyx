@@ -204,6 +204,22 @@ contract ValuationHandlerTest is TestHelpers {
         assertEq(actualAssetAmount, expectedAssetAmount);
     }
 
+    function test_exotic_decimals_overflow_and_high_decimals_precision() public {
+        // Very high decimals can cause precision concerns; use 25 to stay safe with 10**dec
+        address tokenHigh = address(new MockERC20(25));
+        vm.prank(admin);
+        valuationHandler.setAssetRate(
+            ValuationHandler.AssetRateInput({asset: tokenHigh, rate: 1e18, expiry: uint40(block.timestamp + 1)})
+        );
+
+        uint256 amountHigh = 7 * (10 ** 25);
+        uint256 valueHigh = valuationHandler.convertAssetAmountToValue({_asset: tokenHigh, _assetAmount: amountHigh});
+        assertEq(valueHigh, 7e18);
+
+        uint256 roundTripHigh = valuationHandler.convertValueToAssetAmount({_value: valueHigh, _asset: tokenHigh});
+        assertApproxEqAbs(roundTripHigh, amountHigh, 1);
+    }
+
     function test_getDefaultSharePrice_success() public view {
         uint256 actualSharePrice = valuationHandler.getDefaultSharePrice();
         assertEq(actualSharePrice, 1e18);

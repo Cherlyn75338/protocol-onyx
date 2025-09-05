@@ -375,4 +375,93 @@ contract ERC7540LikeRedeemQueueTest is TestHelpers {
         assertEq(redeemQueue.getRedeemRequest(1).controller, address(0));
         assertEq(redeemQueue.getRedeemRequest(3).controller, address(0));
     }
+
+    function test_executeRedeemRequests_staleSharePrice_pays_different_assets() public {
+        // Asset and rate
+        uint8 assetDecimals = 6;
+        address asset = address(new MockERC20(assetDecimals));
+        vm.prank(admin);
+        redeemQueue.setAsset({_asset: asset});
+
+        uint128 rate = 4e18; // 1 asset : 4 value
+        vm.prank(admin);
+        valuationHandler.setAssetRate(
+            ValuationHandler.AssetRateInput({asset: asset, rate: rate, expiry: uint40(block.timestamp + 1 days)})
+        );
+
+        // Seed Shares with asset liquidity
+        deal(asset, address(shares), 1_000_000_000, true);
+
+        // Prepare controllers with same shares amount
+        address controllerStale = makeAddr("controllerStale");
+        address controllerFresh = makeAddr("controllerFresh");
+        uint256 sharesAmount = 20e18;
+        deal(address(shares), controllerStale, sharesAmount, true);
+        deal(address(shares), controllerFresh, sharesAmount, true);
+        vm.prank(controllerStale);
+        shares.approve(address(redeemQueue), type(uint256).max);
+        vm.prank(controllerFresh);
+        shares.approve(address(redeemQueue), type(uint256).max);
+
+        // Set stale share price = 1e18
+        uint256 t0 = 1000;
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 1e18, _timestamp: t0});
+
+        // Request and execute redemption at stale price
+        vm.prank(controllerStale);
+        uint256 idStale = redeemQueue.requestRedeem({_shares: sharesAmount, _controller: controllerStale, _owner: controllerStale});
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = idStale;
+        vm.prank(admin);
+        redeemQueue.executeRedeemRequests({_requestIds: ids});
+        uint256 assetsStale = IERC20(asset).balanceOf(controllerStale);
+
+        // Fresh share price = 2e18 (half the assets for same shares)
+        uint256 t1 = t0 + 1 days;
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 2e18, _timestamp: t1});
+
+        vm.prank(controllerFresh);
+        uint256 idFresh = redeemQueue.requestRedeem({_shares: sharesAmount, _controller: controllerFresh, _owner: controllerFresh});
+        ids[0] = idFresh;
+        vm.prank(admin);
+        redeemQueue.executeRedeemRequests({_requestIds: ids});
+        uint256 assetsFresh = IERC20(asset).balanceOf(controllerFresh);
+
+        // Price doubled -> assets should double
+        assertEq(assetsFresh, assetsStale * 2);
+    }
+
+    function test_executeRedeemRequests_revert_ZeroAssets_due_to_rounding() public {
+        // Tiny share value and high rate cause conversion to 0
+        uint8 assetDecimals = 6;
+        address asset = address(new MockERC20(assetDecimals));
+        vm.prank(admin);
+        redeemQueue.setAsset({_asset: asset});
+
+        uint128 hugeRate = type(uint128).max; // very high value per asset to force rounding to 0 asset
+        vm.prank(admin);
+        valuationHandler.setAssetRate(
+            ValuationHandler.AssetRateInput({asset: asset, rate: hugeRate, expiry: uint40(block.timestamp + 1 days)})
+        );
+
+        // Seed shares to controller
+        address controller = makeAddr("controller");
+        uint256 sharesAmount = 1; // 1 wei of share
+        deal(address(shares), controller, sharesAmount, true);
+        vm.prank(controller);
+        shares.approve(address(redeemQueue), type(uint256).max);
+
+        // Set price
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 1, _timestamp: block.timestamp});
+
+        vm.prank(controller);
+        uint256 id = redeemQueue.requestRedeem({_shares: sharesAmount, _controller: controller, _owner: controller});
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = id;
+
+        vm.expectRevert(ERC7540LikeRedeemQueue.ERC7540LikeRedeemQueue__ExecuteRedeemRequests__ZeroAssets.selector);
+        vm.prank(admin);
+        redeemQueue.executeRedeemRequests({_requestIds: ids});
+    }
 }

