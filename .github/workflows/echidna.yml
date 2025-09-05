@@ -1,0 +1,48 @@
+name: Echidna
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  echidna:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache submodules and libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib
+            remappings.txt
+          key: libs-${{ runner.os }}-${{ hashFiles('remappings.txt') }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run Echidna
+        run: |
+          set -e
+          mkdir -p echidna-out
+          docker run --rm \
+            -v "$PWD":/work \
+            -w /work \
+            trailofbits/echidna:latest \
+            echidna echidna/echidna.yaml | tee echidna-out/output.txt || true
+
+      - name: Upload Echidna output
+        uses: actions/upload-artifact@v4
+        with:
+          name: echidna-output
+          path: echidna-out/output.txt
+
+      - name: Summarize results
+        if: always()
+        run: |
+          echo "Echidna run completed. See attached artifact for full output." | tee -a $GITHUB_STEP_SUMMARY

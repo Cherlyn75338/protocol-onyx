@@ -1,0 +1,27 @@
+testMode: assertion
+seqLen: 100
+testLimit: 2000
+workers: 1
+format: text
+deployer: "0x10000"
+sender: ["0x10000","0x20000","0x30000","0x40000"]
+balance: 1000000000000000000000000
+coverage: false
+
+solcArgs: ["--via-ir"]
+
+cryticArgs: [
+  "--compile-solc", "0.8.28",
+  "--foundry-project",
+  "--solc-remaps",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
+]
+
+contractAddr: ""
+
+testContracts:
+  - echidna/OnyxEchidnaInvariants.sol:OnyxEchidnaInvariants
+
+codeSize: false
+

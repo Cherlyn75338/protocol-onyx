@@ -34,6 +34,20 @@ forge build
 forge test
 ```
 
+### Echidna
+
+To run the Echidna invariants locally:
+
+1) Install Echidna (`crytic-compile` and `echidna`) and Foundry toolchain.
+
+2) From the project root, run:
+
+```
+echidna echidna/echidna.yaml
+```
+
+The harness is `echidna/OnyxEchidnaInvariants.sol:OnyxEchidnaInvariants` and deploys `Shares`, `ValuationHandler`, `FeeHandler`, fee trackers, and issuance queues. Key invariants include restricted access to sensitive methods, identity conversion at 1:1 rate for the mock asset, and fee accounting consistency.
+
 ## Licensing
 
 - Source-available under Business Source License 1.1 (BUSL-1.1).
