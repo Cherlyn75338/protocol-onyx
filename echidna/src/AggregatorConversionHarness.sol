@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {ValueHelpersLib} from "src/utils/ValueHelpersLib.sol";
-import {MockAggregator} from "echidna/src/mocks/MockAggregator.sol";
+import {MockAggregator} from "./mocks/MockAggregator.sol";
 
 contract AggregatorConversionHarness {
     using ValueHelpersLib for uint256;
