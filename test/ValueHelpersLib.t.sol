@@ -7,70 +7,67 @@ import {ValueHelpersLib} from "src/utils/ValueHelpersLib.sol";
 // Lightweight test suite without forge-std. Uses `require` for assertions.
 contract ValueHelpersLibTest {
     function test_convert_rateQuotedInBase_roundsDown() public {
-        // _baseAmount = 3, _ratePrecision = 1e18, _quotePrecision = 1e6
-        // _rate = 2e18 (2 quote per 1 base), _basePrecision = 1e18
-        // Expected: floor( (3 * 1e18) * 1e6 / (2e18 * 1e18) ) = floor(3e24 / 2e36) = 0
-        uint256 q = _convert({
-            _baseAmount: 3,
+        // Convert value (1e18 precision) to asset (1e6 precision), rate quoted in base (value per asset)
+        // value = 5e18, rate = 2e18 (2 value per 1 asset) => expected assets = floor((5/2)) = 2.5 => 2_500_000
+        uint256 assets = _convert({
+            _baseAmount: 5e18,
             _basePrecision: 1e18,
             _quotePrecision: 1e6,
             _rate: 2e18,
             _ratePrecision: 1e18,
             _rateQuotedInBase: true
         });
-        require(q == 0, "expected floor rounding to zero");
+        require(assets == 2_500_000, "expected floor rounding to 2_500_000");
 
-        // Larger values to avoid underflow to zero but still fractional -> floor
-        // baseAmount = 3e18 base units (1 basePrecision), expecting floor( (3 * 1e18) * 1e6 / (2e18 * 1e18) ) = floor(3e24/2e36)=0
-        // Use different precisions to get non-zero: baseAmount=3e18, quotePrecision=1e18 yields floor(3e36/2e36)=1
-        uint256 q2 = _convert({
-            _baseAmount: 3e18,
+        // Another fractional case: value=1e18, rate=3e18 -> 0.333333... assets -> 333_333
+        uint256 assets2 = _convert({
+            _baseAmount: 1e18,
             _basePrecision: 1e18,
-            _quotePrecision: 1e18,
-            _rate: 2e18,
+            _quotePrecision: 1e6,
+            _rate: 3e18,
             _ratePrecision: 1e18,
             _rateQuotedInBase: true
         });
-        require(q2 == 1, "expected floor rounding down");
+        require(assets2 == 333_333, "expected floor rounding to 333_333");
     }
 
     function test_convert_rateQuotedInQuote_roundsDown() public {
-        // _baseAmount = 5, _rate = 3e18 (3 base per 1 quote), _quotePrecision=1e6, basePrecision=1e18
-        // Expected: floor( 5*3e18 * 1e6 / (1e18 * 1e18)) = floor(15e24/1e36)=0
-        uint256 q = _convert({
-            _baseAmount: 5,
-            _basePrecision: 1e18,
-            _quotePrecision: 1e6,
-            _rate: 3e18,
+        // Convert asset (1e6 precision) to value (1e18 precision), rate quoted in quote (value per base unit)
+        // assetAmount=3e6, rate=2e18 => expected value = 6e18
+        uint256 value = _convert({
+            _baseAmount: 3e6,
+            _basePrecision: 1e6,
+            _quotePrecision: 1e18,
+            _rate: 2e18,
             _ratePrecision: 1e18,
             _rateQuotedInBase: false
         });
-        require(q == 0, "expected floor rounding to zero");
+        require(value == 6e18, "expected 6e18 value");
 
-        // Scale up to get fractional > 0: 5e18 base -> floor(15e36/1e36)=15
-        uint256 q2 = _convert({
-            _baseAmount: 5e18,
-            _basePrecision: 1e18,
+        // assetAmount=1e6, rate=3e18 => expected value = 3e18
+        uint256 value2 = _convert({
+            _baseAmount: 1e6,
+            _basePrecision: 1e6,
             _quotePrecision: 1e18,
             _rate: 3e18,
             _ratePrecision: 1e18,
             _rateQuotedInBase: false
         });
-        require(q2 == 15, "expected floor rounding down");
+        require(value2 == 3e18, "expected 3e18 value");
     }
 
     function test_calcSharesAndValue_rounding() public {
-        // share value 2e18, value 3 -> shares = floor(1e18*3/2e18)=0
-        uint256 s0 = ValueHelpersLib.calcSharesAmountForValue(2e18, 3);
-        require(s0 == 0, "small value to shares should floor to zero");
+        // valuePerShare=2e18, value=3e18 -> shares=floor(1e18*3e18/2e18)=1.5e18
+        uint256 shares = ValueHelpersLib.calcSharesAmountForValue(2e18, 3e18);
+        require(shares == 15e17, "shares should be 1.5e18");
 
         // valuePerShare=2e18, shares=3e18 -> value=floor(2e18*3e18/1e18)=6e18
         uint256 v = ValueHelpersLib.calcValueOfSharesAmount(2e18, 3e18);
         require(v == 6e18, "value of shares matches");
 
-        // totalValue 5e18, totalShares 2e18 -> vps=floor(1e18*5e18/2e18)=2e18
+        // totalValue 5e18, totalShares 2e18 -> vps=floor(1e18*5e18/2e18)=2.5e18
         uint256 vps = ValueHelpersLib.calcValuePerShare(5e18, 2e18);
-        require(vps == 2e18, "value per share floor rounding");
+        require(vps == 25e17, "value per share floor rounding");
     }
 
     function _convert(

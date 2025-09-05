@@ -24,19 +24,18 @@ contract FeeRoundingTest {
     }
 
     function test_deposit_math_rounding_favors_protocol() public {
-        // sharePrice=2e18, asset->value conversion assumed exact here.
+        // sharePrice=2e18, value=3e18 -> grossShares=floor(1e18*3e18/2e18)=1.5e18
         uint256 sharePrice = 2e18;
-        // User deposits assets worth value=3e18 (1.5 shares exact, but integer methods floor)
         uint256 value = 3e18;
-        uint256 grossShares = ValueHelpersLib.calcSharesAmountForValue(sharePrice, value); // floor(1e18*3e18/2e18)=1e18
-        require(grossShares == 1e18, "gross shares floors down");
+        uint256 grossShares = ValueHelpersLib.calcSharesAmountForValue(sharePrice, value);
+        require(grossShares == 15e17, "gross shares 1.5e18");
 
-        // entrance fee 10% -> floor(1e18*1000/10000)=1e17
+        // entrance fee 10% -> floor(1.5e18*1000/10000)=1.5e17
         uint256 feeShares = __calcEntranceExitFee(grossShares, 1000);
-        require(feeShares == 1e17, "fee shares floors down");
+        require(feeShares == 15e16, "fee shares floors down");
 
-        uint256 netShares = grossShares - feeShares;
-        require(netShares == 9e17, "net shares consistent");
+        uint256 netShares = grossShares - feeShares; // 1.35e18
+        require(netShares == 135e16, "net shares consistent");
         require(netShares > 0, "non-zero net shares");
     }
 
@@ -44,15 +43,14 @@ contract FeeRoundingTest {
         uint256 sharePrice = 2e18;
         uint256 grossSharesToRedeem = 5e17; // 0.5 shares
 
-        // exit fee 1% -> floor(5e17*100/10000)=5e13
+        // exit fee 1% -> floor(5e17*100/10000)=5e15
         uint256 feeShares = __calcEntranceExitFee(grossSharesToRedeem, 100);
-        require(feeShares == 5e13, "exit fee shares floors down");
+        require(feeShares == 5e15, "exit fee shares floors down");
 
-        uint256 netShares = grossSharesToRedeem - feeShares;
-        // assets to user computed from net shares
+        uint256 netShares = grossSharesToRedeem - feeShares; // 0.5e18 - 5e13
         uint256 valueDue = ValueHelpersLib.calcValueOfSharesAmount(sharePrice, netShares);
-        // floor(2e18* (5e17-5e13)/1e18) = approx 1e18 - floor( (2e18*5e13)/1e18 )
-        require(valueDue > 0, "user assets non-zero");
+        // exact: (2e18*(5e17-5e15))/1e18 = 2*(4.95e17) = 9.9e17
+        require(valueDue == 990_000_000_000_000_000, "valueDue floors as expected");
     }
 }
 
