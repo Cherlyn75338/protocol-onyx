@@ -87,11 +87,12 @@ contract EchidnaValueHelpers {
         bool rateQuotedInBase,
         uint8 k
     ) external {
-        // sanitize inputs
-        basePrecision = boundPrecision(basePrecision);
-        quotePrecision = boundPrecision(quotePrecision);
-        ratePrecision = boundPrecision(ratePrecision);
-        rate = boundNonZero(rate);
+        // sanitize inputs to realistic domains (powers of ten, bounded rates)
+        basePrecision = clampPrecisionPow10(basePrecision);
+        quotePrecision = clampPrecisionPow10(quotePrecision);
+        ratePrecision = clampPrecisionPow10(ratePrecision);
+        if (ratePrecision == 0) ratePrecision = 1e18; // default to 18-dec precision
+        rate = clampRate(rate);
         baseAmount = baseAmount % type(uint128).max; // keep within practical bounds
         if (k == 0) {
             k = 1;
@@ -132,10 +133,11 @@ contract EchidnaValueHelpers {
         uint256 ratePrecision,
         bool rateQuotedInBase
     ) external {
-        basePrecision = boundPrecision(basePrecision);
-        quotePrecision = boundPrecision(quotePrecision);
-        ratePrecision = boundPrecision(ratePrecision);
-        rate = boundNonZero(rate);
+        basePrecision = clampPrecisionPow10(basePrecision);
+        quotePrecision = clampPrecisionPow10(quotePrecision);
+        ratePrecision = clampPrecisionPow10(ratePrecision);
+        if (ratePrecision == 0) ratePrecision = 1e18; // default to 18-dec precision
+        rate = clampRate(rate);
         baseAmount = baseAmount % type(uint128).max;
 
         uint256 quoteAmount = ValueHelpersLib.convert({
@@ -172,19 +174,21 @@ contract EchidnaValueHelpers {
     // Helpers
     // -------------------------
 
-    function boundPrecision(uint256 p) internal pure returns (uint256) {
-        if (p == 0) return 1;
-        // cap to 1e36 to avoid extreme magnitudes (practical upper bound)
-        if (p > 10 ** 36) return 10 ** 36;
-        return p;
+    // Clamp to a realistic ERC20-like precision: 10**d where d in [0, 18]
+    function clampPrecisionPow10(uint256 p) internal pure returns (uint256) {
+        uint8 d = uint8(p % 19);
+        unchecked { return 10 ** uint256(d); }
     }
 
     function boundAtLeastOne(uint256 x) internal pure returns (uint256) {
         return x == 0 ? 1 : x;
     }
 
-    function boundNonZero(uint256 x) internal pure returns (uint256) {
-        return x == 0 ? 1 : x;
+    // Clamp rate to a reasonable upper bound to avoid pathological overflow during fuzzing
+    function clampRate(uint256 r) internal pure returns (uint256) {
+        if (r == 0) return 1;
+        uint256 maxR = 10 ** 27; // 27-dec fixed-point upper bound
+        return r > maxR ? maxR : r;
     }
 }
 

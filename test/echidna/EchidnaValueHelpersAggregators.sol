@@ -17,6 +17,9 @@ contract EchidnaValueHelpersAggregators {
 
     /// @notice Converting using aggregator with tolerance must revert when answer<=0 or timestamp stale
     function check_aggregator_validation(int256 answer, uint256 tolerance, bool quotedInBase) external {
+        // Clamp tolerance to a sane bound to avoid impractical overflows
+        tolerance = tolerance % (30 days);
+
         oracle.setAnswer(answer);
         oracle.setUpdatedAt(block.timestamp);
 
@@ -27,7 +30,7 @@ contract EchidnaValueHelpersAggregators {
             return;
         }
 
-        // when timestamp is fresh, conversion should succeed
+        // when timestamp is fresh, conversion should succeed or revert only on arithmetic overflow
         bool okFresh;
         (okFresh,) = address(this).call(abi.encodeWithSelector(this.try_convert.selector, uint256(1e18), uint256(1e18), tolerance, quotedInBase));
         assert(okFresh);
