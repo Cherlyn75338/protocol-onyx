@@ -1,3 +1,17 @@
+# Tests
+
+This repo includes Foundry tests asserting rounding behavior and fee math:
+
+- `test/ValueHelpersLib.t.sol`: Verifies OZ `Math.mulDiv`-based conversions round down as intended in `ValueHelpersLib` and that per-share/value conversions floor.
+- `test/FeeRounding.t.sol`: Asserts entrance/exit fee share rounding and deposit/redeem math, checking that rounding favors the protocol and net outputs are consistent.
+- `test/PerformanceFee.t.sol`: Validates performance fee calculation rounding and high water mark update logic on small/large values.
+
+Run:
+
+```
+forge test -vv
+```
+
 # Onyx (by Enzyme Protocol)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
