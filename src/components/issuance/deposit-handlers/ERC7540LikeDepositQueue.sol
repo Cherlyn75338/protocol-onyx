@@ -70,6 +70,10 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
         DepositRestriction depositRestriction;
         mapping(uint256 => DepositRequestInfo) idToRequest;
         mapping(address => bool) isAllowedController;
+        // Optional: maximum age of share price (in seconds) allowed for execution
+        uint24 maxSharePriceAge;
+        // Optional: minimum asset amount per request to avoid dust execution
+        uint128 minDepositAssets;
     }
 
     function __getDepositQueueStorage() private pure returns (DepositQueueStorage storage $) {
@@ -90,6 +94,10 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
     event DepositMinRequestDurationSet(uint24 minRequestDuration);
 
     event DepositRestrictionSet(DepositRestriction restriction);
+
+    event DepositMaxSharePriceAgeSet(uint24 maxSharePriceAge);
+
+    event DepositMinAssetsSet(uint128 minDepositAssets);
 
     //==================================================================================================================
     // Errors
@@ -148,6 +156,20 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
         emit DepositMinRequestDurationSet({minRequestDuration: _minRequestDuration});
     }
 
+    /// @notice Sets the maximum allowed staleness of share price used during execution
+    function setDepositMaxSharePriceAge(uint24 _maxSharePriceAge) external onlyAdminOrOwner {
+        __getDepositQueueStorage().maxSharePriceAge = _maxSharePriceAge;
+
+        emit DepositMaxSharePriceAgeSet({maxSharePriceAge: _maxSharePriceAge});
+    }
+
+    /// @notice Sets the minimum deposit asset amount per request
+    function setDepositMinAssets(uint128 _minDepositAssets) external onlyAdminOrOwner {
+        __getDepositQueueStorage().minDepositAssets = _minDepositAssets;
+
+        emit DepositMinAssetsSet({minDepositAssets: _minDepositAssets});
+    }
+
     //==================================================================================================================
     // Required: IERC7540LikeDepositHandler
     //==================================================================================================================
@@ -198,6 +220,10 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
         returns (uint256 requestId_)
     {
         require(_assets > 0, ERC7540LikeDepositQueue__RequestDeposit__ZeroAssets());
+        uint128 minAssets = __getDepositQueueStorage().minDepositAssets;
+        if (minAssets > 0) {
+            require(_assets >= minAssets, ERC7540LikeDepositQueue__RequestDeposit__ZeroAssets());
+        }
         require(_owner == msg.sender, ERC7540LikeDepositQueue__RequestDeposit__OwnerNotSender());
         require(_owner == _controller, ERC7540LikeDepositQueue__RequestDeposit__OwnerNotController());
 
@@ -237,7 +263,11 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
         Shares shares = Shares(__getShares());
         IFeeHandler feeHandler = IFeeHandler(shares.getFeeHandler());
         ValuationHandler valuationHandler = ValuationHandler(shares.getValuationHandler());
-        (uint256 sharePriceInValueAsset,) = valuationHandler.getSharePrice();
+        (uint256 sharePriceInValueAsset, uint256 priceTimestamp) = valuationHandler.getSharePrice();
+        uint24 maxPriceAge = __getDepositQueueStorage().maxSharePriceAge;
+        if (maxPriceAge > 0) {
+            require(block.timestamp - priceTimestamp <= maxPriceAge, "STALE_SHARE_PRICE");
+        }
 
         // Fulfill requests
         uint256 totalAssetsDeposited;
@@ -251,7 +281,7 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
             // Add to total assets deposited
             totalAssetsDeposited += request.assetAmount;
 
-            // Calculate gross shares
+            // Calculate gross shares; skip dust that would lead to zero net shares
             uint256 value =
                 valuationHandler.convertAssetAmountToValue({_asset: asset(), _assetAmount: request.assetAmount});
             uint256 grossSharesAmount =
@@ -263,7 +293,12 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
 
             // Calculate net shares
             uint256 netShares = grossSharesAmount - feeSharesAmount;
-            require(netShares > 0, ERC7540LikeDepositQueue__ExecuteDepositRequests__ZeroShares());
+            if (netShares == 0) {
+                // Skip dust request: refund and continue without reverting the entire batch
+                IERC20(asset()).safeTransfer(request.controller, request.assetAmount);
+                emit DepositRequestCanceled({requestId: requestId});
+                continue;
+            }
 
             // Mint net shares to user
             shares.mintFor({_to: request.controller, _sharesAmount: netShares});
@@ -320,5 +355,15 @@ contract ERC7540LikeDepositQueue is IERC7540LikeDepositHandler, ERC7540LikeIssua
     /// @notice Returns true if the account is in the allowed controllers list
     function isInAllowedControllerList(address _who) public view returns (bool) {
         return __getDepositQueueStorage().isAllowedController[_who];
+    }
+
+    /// @notice Returns the maximum allowed share price age used during execution
+    function getDepositMaxSharePriceAge() public view returns (uint24) {
+        return __getDepositQueueStorage().maxSharePriceAge;
+    }
+
+    /// @notice Returns the minimum deposit asset amount per request
+    function getDepositMinAssets() public view returns (uint128) {
+        return __getDepositQueueStorage().minDepositAssets;
     }
 }

@@ -1,0 +1,8 @@
+testMode: assertion
+seqLen: 50
+shrinkLimit: 10000
+timeout: 0
+estimateGas: true
+coverage: true
+cryticArgs: ["--solc-remaps", "src=src @openzeppelin/=lib/openzeppelin-contracts/"]
+filterFunctions: []
