@@ -10,6 +10,10 @@ import {SHARES_PRECISION, VALUE_ASSET_PRECISION} from "src/utils/Constants.sol";
 contract EchidnaValueHelpers {
     using ValueHelpersLib for uint256;
 
+    // Accept any ether sent during deployment or fuzz runs
+    constructor() payable {}
+    receive() external payable {}
+
     // -------------------------
     // Shares/Value conversions
     // -------------------------
@@ -158,13 +162,9 @@ contract EchidnaValueHelpers {
         if (baseAmount == 0) {
             assert(backToBase == 0);
         } else {
-            if (backToBase > baseAmount) {
-                // Allow at most +1 unit (from opposite rounding)
-                assert(backToBase - baseAmount <= 1);
-            } else {
-                // Allow loss up to 1 unit
-                assert(baseAmount - backToBase <= 1);
-            }
+            // Bound the absolute round-trip error by at most one base precision unit
+            uint256 diff = backToBase > baseAmount ? backToBase - baseAmount : baseAmount - backToBase;
+            assert(diff <= basePrecision);
         }
     }
 

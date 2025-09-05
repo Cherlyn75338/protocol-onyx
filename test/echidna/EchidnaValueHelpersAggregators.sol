@@ -10,7 +10,7 @@ import {AggregatorV3Mock} from "test/echidna/EchidnaOraclesMock.sol";
 contract EchidnaValueHelpersAggregators {
     AggregatorV3Mock public oracle;
 
-    constructor() {
+    constructor() payable {
         // default: 18 decimals, answer = 1e18, updatedAt = now
         oracle = new AggregatorV3Mock(18, int256(1e18), block.timestamp);
     }
