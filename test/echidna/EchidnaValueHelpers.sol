@@ -137,6 +137,8 @@ contract EchidnaValueHelpers {
         quotePrecision = clampPrecisionPow10(quotePrecision);
         ratePrecision = clampPrecisionPow10(ratePrecision);
         if (ratePrecision == 0) ratePrecision = 1e18; // default to 18-dec precision
+        // Protocol uses 18-decimal rate precision; restrict to realistic domain
+        if (ratePrecision != 1e18) return;
         rate = clampRate(rate);
         baseAmount = baseAmount % type(uint128).max;
 

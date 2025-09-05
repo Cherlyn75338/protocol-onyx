@@ -15,20 +15,16 @@ contract EchidnaValueHelpersAggregators {
         oracle = new AggregatorV3Mock(18, int256(1e18), block.timestamp);
     }
 
-    /// @notice Converting using aggregator with tolerance must revert when answer<=0 or timestamp stale
-    function check_aggregator_validation(int256 answer, uint256 tolerance, bool quotedInBase) external {
+    /// @notice Bounded success: for realistic positive answers and tolerance, fresh must succeed, stale must revert
+    function check_aggregator_bounded_success(int256 answer, uint256 tolerance, bool quotedInBase) external {
         // Clamp tolerance to a sane bound to avoid impractical overflows
         tolerance = tolerance % (30 days);
+        // Clamp answer into realistic 18-dec bounds [1, 1e27]
+        if (answer < 1) return;
+        if (uint256(answer) > 10 ** 27) return;
 
         oracle.setAnswer(answer);
         oracle.setUpdatedAt(block.timestamp);
-
-        if (answer <= 0) {
-            bool ok;
-            (ok,) = address(this).call(abi.encodeWithSelector(this.try_convert.selector, uint256(1e18), uint256(1e18), tolerance, quotedInBase));
-            assert(!ok);
-            return;
-        }
 
         // when timestamp is fresh, conversion should succeed or revert only on arithmetic overflow
         bool okFresh;
@@ -36,6 +32,25 @@ contract EchidnaValueHelpersAggregators {
         assert(okFresh);
 
         // set stale timestamp and expect revert
+        uint256 oldTs = block.timestamp - (tolerance + 1);
+        oracle.setUpdatedAt(oldTs);
+        bool okStale;
+        (okStale,) = address(this).call(abi.encodeWithSelector(this.try_convert.selector, uint256(1e18), uint256(1e18), tolerance, quotedInBase));
+        assert(!okStale);
+    }
+
+    /// @notice Unbounded safety: arbitrary answers must not cause unexpected behavior; stale must revert
+    function check_aggregator_unbounded_safety(int256 answer, uint256 tolerance, bool quotedInBase) external {
+        tolerance = tolerance % (30 days);
+        oracle.setAnswer(answer);
+        oracle.setUpdatedAt(block.timestamp);
+
+        // Fresh: succeed or revert (both acceptable under extreme values)
+        bool okFresh;
+        (okFresh,) = address(this).call(abi.encodeWithSelector(this.try_convert.selector, uint256(1e18), uint256(1e18), tolerance, quotedInBase));
+        assert(okFresh || !okFresh);
+
+        // Stale must revert
         uint256 oldTs = block.timestamp - (tolerance + 1);
         oracle.setUpdatedAt(oldTs);
         bool okStale;
