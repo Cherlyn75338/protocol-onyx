@@ -282,4 +282,80 @@ contract LinearCreditDebtTrackerTest is Test, TestHelpers {
 
         assertEq(tracker.getPositionValue(), expectedValue);
     }
+
+    //==================================================================================================================
+    // Bounds & overflow
+    //==================================================================================================================
+
+    function test_addItem_revert_onUint24Overflow() public {
+        // Set lastItemId to max and ensure next add reverts on ++ overflow
+        LinearCreditDebtTrackerHarness(address(tracker)).harness_setLastItemId(type(uint24).max);
+
+        vm.expectRevert();
+        vm.prank(admin);
+        tracker.addItem({_totalValue: 1, _start: 1, _duration: 0, _description: "test"});
+    }
+
+    function test_addItem_succeeds_atUint24MaxMinusOne_thenReverts() public {
+        // Set lastItemId to max-1: first add should succeed and set lastItemId to max
+        LinearCreditDebtTrackerHarness(address(tracker)).harness_setLastItemId(type(uint24).max - 1);
+
+        vm.prank(admin);
+        uint24 id = tracker.addItem({_totalValue: 1, _start: 1, _duration: 0, _description: "test"});
+        assertEq(id, type(uint24).max);
+        assertEq(tracker.getLastItemId(), type(uint24).max);
+
+        // Next add should revert on overflow
+        vm.expectRevert();
+        vm.prank(admin);
+        tracker.addItem({_totalValue: 1, _start: 1, _duration: 0, _description: "test"});
+    }
+
+    //==================================================================================================================
+    // Time math edge cases
+    //==================================================================================================================
+
+    function test_calcItemValue_edges_durationZero() public {
+        uint256 t0 = 10_000;
+        vm.warp(t0);
+
+        vm.startPrank(admin);
+        uint24 id = tracker.addItem({_totalValue: 100, _start: uint40(t0 + 100), _duration: 0, _description: "t"});
+        tracker.updateSettledValue({_id: id, _totalSettled: 7});
+        vm.stopPrank();
+
+        // Before start: settled only
+        vm.warp(t0 + 99);
+        assertEq(tracker.calcItemValue(id), 7);
+
+        // At start: current implementation returns settled (due to if (now <= start))
+        vm.warp(t0 + 100);
+        assertEq(tracker.calcItemValue(id), 7);
+
+        // After start: matured (settled + totalValue)
+        vm.warp(t0 + 101);
+        assertEq(tracker.calcItemValue(id), 107);
+    }
+
+    function test_calcItemValue_edges_boundaries() public {
+        uint256 start = 50_000;
+        vm.warp(start);
+
+        vm.startPrank(admin);
+        uint24 id = tracker.addItem({_totalValue: 100, _start: uint40(start), _duration: 10, _description: "t"});
+        tracker.updateSettledValue({_id: id, _totalSettled: 5});
+        vm.stopPrank();
+
+        // At start: settled only
+        vm.warp(start);
+        assertEq(tracker.calcItemValue(id), 5);
+
+        // Mid-way (lapsed=5): settled + 50
+        vm.warp(start + 5);
+        assertEq(tracker.calcItemValue(id), 55);
+
+        // At end: settled + totalValue
+        vm.warp(start + 10);
+        assertEq(tracker.calcItemValue(id), 105);
+    }
 }
