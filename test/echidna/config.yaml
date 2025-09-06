@@ -3,7 +3,7 @@ estimateGas: true
 format: text
 seqLen: 20
 shrinkLimit: 10000
-cryticArgs: ["--solc-remaps", "src=src @openzeppelin=lib/openzeppelin-contracts"]
+cryticArgs: ["--solc","0.8.28","--compile-force-framework","solc","--solc-remaps","src=src @openzeppelin=lib/openzeppelin-contracts"]
 corpusDir: test/echidna/corpus
 testLimit: 20000
 contract: EchidnaHarness
