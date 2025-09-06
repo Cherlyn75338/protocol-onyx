@@ -34,10 +34,12 @@ contract MockERC20 {
     }
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-        uint256 allowed = allowance[from][msg.sender];
-        if (allowed != type(uint256).max) {
-            require(allowed >= amount, "allowance");
-            allowance[from][msg.sender] = allowed - amount;
+        if (from != msg.sender) {
+            uint256 allowed = allowance[from][msg.sender];
+            if (allowed != type(uint256).max) {
+                require(allowed >= amount, "allowance");
+                allowance[from][msg.sender] = allowed - amount;
+            }
         }
         _transfer(from, to, amount);
         return true;

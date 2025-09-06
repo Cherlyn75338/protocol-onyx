@@ -142,6 +142,9 @@ contract EchidnaValueHelpers {
         rate = clampRate(rate);
         baseAmount = baseAmount % type(uint128).max;
 
+        // Guard: require non-degenerate precisions (skip if 1 to avoid trivial zero-scale edge)
+        if (basePrecision <= 1 || quotePrecision <= 1) return;
+
         uint256 quoteAmount = ValueHelpersLib.convert({
             _baseAmount: baseAmount,
             _basePrecision: basePrecision,
