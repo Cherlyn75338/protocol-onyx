@@ -1,0 +1,408 @@
+# lending_normalized.json (19 modules)
+## module account
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::lending
+- functions: 4
+  - entries: 0 | publics: 1
+  - account_owner vis=Public entry=False tparams=0 params=1 returns=1
+  - create_account_cap vis=Friend entry=False tparams=0 params=1 returns=1
+  - create_child_account_cap vis=Friend entry=False tparams=0 params=2 returns=1
+  - delete_account_cap vis=Friend entry=False tparams=0 params=1 returns=0
+## module calculator
+- functions: 7
+  - entries: 0 | publics: 7
+  - caculate_utilization vis=Public entry=False tparams=0 params=2 returns=1
+  - calculate_amount vis=Public entry=False tparams=0 params=4 returns=1
+  - calculate_borrow_rate vis=Public entry=False tparams=0 params=2 returns=1
+  - calculate_compounded_interest vis=Public entry=False tparams=0 params=2 returns=1
+  - calculate_linear_interest vis=Public entry=False tparams=0 params=2 returns=1
+  - calculate_supply_rate vis=Public entry=False tparams=0 params=3 returns=1
+  - calculate_value vis=Public entry=False tparams=0 params=4 returns=1
+## module constants
+- functions: 9
+  - entries: 0 | publics: 9
+  - FlashLoanMultiple vis=Public entry=False tparams=0 params=0 returns=1
+  - max_number_of_reserves vis=Public entry=False tparams=0 params=0 returns=1
+  - option_type_borrow vis=Public entry=False tparams=0 params=0 returns=1
+  - option_type_repay vis=Public entry=False tparams=0 params=0 returns=1
+  - option_type_supply vis=Public entry=False tparams=0 params=0 returns=1
+  - option_type_withdraw vis=Public entry=False tparams=0 params=0 returns=1
+  - percentage_benchmark vis=Public entry=False tparams=0 params=0 returns=1
+  - seconds_per_year vis=Public entry=False tparams=0 params=0 returns=1
+  - version vis=Public entry=False tparams=0 params=0 returns=1
+## module dynamic_calculator
+- functions: 13
+  - entries: 0 | publics: 13
+  - calculate_current_index vis=Public entry=False tparams=0 params=3 returns=2
+  - dynamic_caculate_utilization vis=Public entry=False tparams=0 params=6 returns=1
+  - dynamic_calculate_apy vis=Public entry=False tparams=1 params=7 returns=2
+  - dynamic_calculate_borrow_rate vis=Public entry=False tparams=0 params=6 returns=1
+  - dynamic_calculate_supply_rate vis=Public entry=False tparams=0 params=7 returns=1
+  - dynamic_health_factor vis=Public entry=False tparams=1 params=9 returns=1
+  - dynamic_liquidation_threshold vis=Public entry=False tparams=0 params=7 returns=1
+  - dynamic_user_collateral_balance vis=Public entry=False tparams=0 params=6 returns=1
+  - dynamic_user_collateral_value vis=Public entry=False tparams=0 params=7 returns=1
+  - dynamic_user_health_collateral_value vis=Public entry=False tparams=0 params=7 returns=1
+  - dynamic_user_health_loan_value vis=Public entry=False tparams=0 params=7 returns=1
+  - dynamic_user_loan_balance vis=Public entry=False tparams=0 params=6 returns=1
+  - dynamic_user_loan_value vis=Public entry=False tparams=0 params=7 returns=1
+## module error
+- functions: 30
+  - entries: 0 | publics: 30
+  - duplicate_config vis=Public entry=False tparams=0 params=0 returns=1
+  - duplicate_reserve vis=Public entry=False tparams=0 params=0 returns=1
+  - exceeded_maximum_borrow_cap vis=Public entry=False tparams=0 params=0 returns=1
+  - exceeded_maximum_deposit_cap vis=Public entry=False tparams=0 params=0 returns=1
+  - incorrect_version vis=Public entry=False tparams=0 params=0 returns=1
+  - insufficient_balance vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_amount vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_coin_type vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_duration_time vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_funds vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_option vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_pool vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_price vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_user vis=Public entry=False tparams=0 params=0 returns=1
+  - invalid_value vis=Public entry=False tparams=0 params=0 returns=1
+  - ltv_is_not_enough vis=Public entry=False tparams=0 params=0 returns=1
+  - no_more_reserves_allowed vis=Public entry=False tparams=0 params=0 returns=1
+  - non_single_value vis=Public entry=False tparams=0 params=0 returns=1
+  - not_available_version vis=Public entry=False tparams=0 params=0 returns=1
+  - not_owner vis=Public entry=False tparams=0 params=0 returns=1
+  - paused vis=Public entry=False tparams=0 params=0 returns=1
+  - pool_not_found vis=Public entry=False tparams=0 params=0 returns=1
+  - price_feed_not_found vis=Public entry=False tparams=0 params=0 returns=1
+  - required_parent_account_cap vis=Public entry=False tparams=0 params=0 returns=1
+  - reserve_not_found vis=Public entry=False tparams=0 params=0 returns=1
+  - rule_not_found vis=Public entry=False tparams=0 params=0 returns=1
+  - user_have_no_collateral vis=Public entry=False tparams=0 params=0 returns=1
+  - user_have_no_loan vis=Public entry=False tparams=0 params=0 returns=1
+  - user_is_healthy vis=Public entry=False tparams=0 params=0 returns=1
+  - user_is_unhealthy vis=Public entry=False tparams=0 params=0 returns=1
+## module flash_loan
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::lending, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::manage
+- functions: 12
+  - entries: 0 | publics: 4
+  - create_asset vis=Friend entry=False tparams=0 params=9 returns=0
+  - create_config vis=Friend entry=False tparams=0 params=1 returns=0
+  - get_asset vis=Public entry=False tparams=1 params=1 returns=8
+  - loan vis=Friend entry=False tparams=1 params=4 returns=2
+  - parsed_receipt vis=Public entry=False tparams=1 params=1 returns=6
+  - repay vis=Friend entry=False tparams=1 params=6 returns=1
+  - set_asset_max vis=Friend entry=False tparams=0 params=3 returns=0
+  - set_asset_min vis=Friend entry=False tparams=0 params=3 returns=0
+  - set_asset_rate_to_supplier vis=Friend entry=False tparams=0 params=3 returns=0
+  - set_asset_rate_to_treasury vis=Friend entry=False tparams=0 params=3 returns=0
+  - version_migrate vis=Public entry=False tparams=0 params=2 returns=0
+  - version_verification vis=Public entry=False tparams=0 params=1 returns=0
+## module incentive
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::incentive_v2, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::lending
+- functions: 11
+  - entries: 2 | publics: 10
+  - add_pool vis=Public entry=True tparams=1 params=9 returns=0
+  - claim_reward vis=Public entry=True tparams=1 params=6 returns=0
+  - claim_reward_non_entry vis=Public entry=False tparams=1 params=5 returns=1
+  - claim_reward_with_account_cap vis=Public entry=False tparams=1 params=5 returns=1
+  - create_and_transfer_ownership vis=Public entry=False tparams=0 params=2 returns=0
+  - earned vis=Public entry=False tparams=0 params=5 returns=3
+  - get_pool_count vis=Public entry=False tparams=0 params=2 returns=1
+  - get_pool_info vis=Public entry=False tparams=0 params=3 returns=4
+  - set_admin vis=Public entry=False tparams=0 params=4 returns=0
+  - set_owner vis=Public entry=False tparams=0 params=4 returns=0
+  - update_reward vis=Friend entry=False tparams=0 params=5 returns=0
+## module incentive_v2
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::incentive_v3
+- functions: 45
+  - entries: 7 | publics: 44
+  - add_funds vis=Public entry=False tparams=1 params=5 returns=0
+  - borrow vis=Public entry=False tparams=1 params=8 returns=1
+  - borrow_with_account_cap vis=Public entry=False tparams=1 params=8 returns=1
+  - calculate_one_from_pool vis=Public entry=False tparams=0 params=6 returns=2
+  - calculate_release_rate vis=Public entry=False tparams=0 params=1 returns=1
+  - calculate_user_effective_amount vis=Public entry=False tparams=0 params=4 returns=1
+  - claim_reward vis=Public entry=True tparams=1 params=7 returns=0
+  - claim_reward_non_entry vis=Public entry=False tparams=1 params=7 returns=1
+  - claim_reward_with_account_cap vis=Public entry=False tparams=1 params=7 returns=1
+  - create_and_transfer_owner vis=Public entry=False tparams=0 params=2 returns=0
+  - create_funds_pool vis=Public entry=False tparams=1 params=5 returns=0
+  - create_incentive vis=Public entry=False tparams=0 params=2 returns=0
+  - create_incentive_pool vis=Public entry=False tparams=1 params=12 returns=0
+  - deposit_with_account_cap vis=Public entry=False tparams=1 params=8 returns=0
+  - entry_borrow vis=Public entry=True tparams=1 params=8 returns=0
+  - entry_deposit vis=Public entry=True tparams=1 params=9 returns=0
+  - entry_deposit_on_behalf_of_user vis=Public entry=True tparams=1 params=10 returns=0
+  - entry_liquidation vis=Public entry=True tparams=2 params=13 returns=0
+  - entry_repay vis=Public entry=True tparams=1 params=9 returns=0
+  - entry_repay_on_behalf_of_user vis=Public entry=False tparams=1 params=10 returns=0
+  - entry_withdraw vis=Public entry=True tparams=1 params=9 returns=0
+  - freeze_incentive_pool vis=Public entry=False tparams=0 params=3 returns=0
+  - get_active_pools vis=Public entry=False tparams=0 params=4 returns=1
+  - get_funds_info vis=Public entry=False tparams=0 params=2 returns=3
+  - get_funds_value vis=Public entry=False tparams=1 params=1 returns=1
+  - get_inactive_pool_objects vis=Public entry=False tparams=0 params=1 returns=1
+  - get_pool_from_asset_and_option vis=Public entry=False tparams=0 params=3 returns=3
+  - get_pool_from_funds_pool vis=Public entry=False tparams=1 params=4 returns=1
+  - get_pool_info vis=Public entry=False tparams=0 params=2 returns=13
+  - get_pool_length vis=Public entry=False tparams=0 params=1 returns=1
+  - get_pool_objects vis=Public entry=False tparams=0 params=1 returns=1
+  - get_total_claimed_from_user vis=Public entry=False tparams=0 params=3 returns=1
+  - liquidation vis=Public entry=False tparams=2 params=12 returns=2
+  - option_borrow vis=Public entry=False tparams=0 params=0 returns=1
+  - option_repay vis=Public entry=False tparams=0 params=0 returns=1
+  - option_supply vis=Public entry=False tparams=0 params=0 returns=1
+  - option_withdraw vis=Public entry=False tparams=0 params=0 returns=1
+  - repay vis=Public entry=False tparams=1 params=9 returns=1
+  - repay_with_account_cap vis=Public entry=False tparams=1 params=8 returns=1
+  - update_reward_all vis=Friend entry=False tparams=0 params=5 returns=0
+  - version_migrate vis=Public entry=False tparams=0 params=2 returns=0
+  - version_verification vis=Public entry=False tparams=0 params=1 returns=0
+  - withdraw vis=Public entry=False tparams=1 params=9 returns=1
+  - withdraw_funds vis=Public entry=False tparams=1 params=4 returns=0
+  - withdraw_with_account_cap vis=Public entry=False tparams=1 params=9 returns=1
+## module incentive_v3
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::manage
+- functions: 44
+  - entries: 7 | publics: 32
+  - borrow vis=Public entry=False tparams=1 params=9 returns=1
+  - borrow_with_account_cap vis=Public entry=False tparams=1 params=9 returns=1
+  - claim_reward vis=Public entry=False tparams=1 params=7 returns=1
+  - claim_reward_entry vis=Public entry=True tparams=1 params=7 returns=0
+  - claim_reward_with_account_cap vis=Public entry=False tparams=1 params=7 returns=1
+  - contains_rule vis=Public entry=False tparams=0 params=3 returns=1
+  - create_incentive_v3 vis=Friend entry=False tparams=0 params=1 returns=0
+  - create_pool vis=Friend entry=False tparams=1 params=4 returns=0
+  - create_reward_fund vis=Friend entry=False tparams=1 params=1 returns=0
+  - create_rule vis=Friend entry=False tparams=2 params=4 returns=0
+  - deposit_reward_fund vis=Friend entry=False tparams=1 params=3 returns=0
+  - deposit_with_account_cap vis=Public entry=False tparams=1 params=8 returns=0
+  - entry_borrow vis=Public entry=True tparams=1 params=9 returns=0
+  - entry_deposit vis=Public entry=True tparams=1 params=9 returns=0
+  - entry_deposit_on_behalf_of_user vis=Public entry=True tparams=1 params=10 returns=0
+  - entry_liquidation vis=Public entry=True tparams=2 params=13 returns=0
+  - entry_repay vis=Public entry=True tparams=1 params=10 returns=0
+  - entry_repay_on_behalf_of_user vis=Public entry=False tparams=1 params=11 returns=0
+  - entry_withdraw vis=Public entry=True tparams=1 params=9 returns=0
+  - get_balance_value_by_reward_fund vis=Public entry=False tparams=1 params=1 returns=1
+  - get_effective_balance vis=Public entry=False tparams=0 params=3 returns=4
+  - get_pool_info vis=Public entry=False tparams=0 params=1 returns=4
+  - get_rule_info vis=Public entry=False tparams=0 params=1 returns=10
+  - get_user_claimable_rewards vis=Public entry=False tparams=0 params=4 returns=1
+  - get_user_index_by_rule vis=Public entry=False tparams=0 params=2 returns=1
+  - get_user_rewards_claimed_by_rule vis=Public entry=False tparams=0 params=2 returns=1
+  - get_user_total_rewards_by_rule vis=Public entry=False tparams=0 params=2 returns=1
+  - liquidation vis=Public entry=False tparams=2 params=12 returns=2
+  - parse_claimable_rewards vis=Public entry=False tparams=0 params=1 returns=5
+  - pools vis=Public entry=False tparams=0 params=1 returns=1
+  - repay vis=Public entry=False tparams=1 params=10 returns=1
+  - repay_with_account_cap vis=Public entry=False tparams=1 params=9 returns=1
+  - set_borrow_fee_rate vis=Friend entry=False tparams=0 params=3 returns=0
+  - set_enable_by_rule_id vis=Friend entry=False tparams=1 params=4 returns=0
+  - set_max_reward_rate_by_rule_id vis=Friend entry=False tparams=1 params=4 returns=0
+  - set_reward_rate_by_rule_id vis=Friend entry=False tparams=1 params=7 returns=0
+  - update_reward_state_by_asset vis=Public entry=False tparams=1 params=4 returns=0
+  - version vis=Public entry=False tparams=0 params=1 returns=1
+  - version_migrate vis=Friend entry=False tparams=0 params=2 returns=0
+  - version_verification vis=Public entry=False tparams=0 params=1 returns=0
+  - withdraw vis=Public entry=False tparams=1 params=9 returns=1
+  - withdraw_borrow_fee vis=Friend entry=False tparams=1 params=3 returns=1
+  - withdraw_reward_fund vis=Friend entry=False tparams=1 params=3 returns=1
+  - withdraw_with_account_cap vis=Public entry=False tparams=1 params=9 returns=1
+## module lending
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::incentive_v2, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::incentive_v3
+- functions: 23
+  - entries: 5 | publics: 11
+  - borrow vis=Public entry=True tparams=1 params=7 returns=0
+  - borrow_coin vis=Friend entry=False tparams=1 params=7 returns=1
+  - borrow_with_account_cap vis=Friend entry=False tparams=1 params=7 returns=1
+  - create_account vis=Public entry=False tparams=0 params=1 returns=1
+  - delete_account vis=Public entry=False tparams=0 params=1 returns=0
+  - deposit vis=Public entry=True tparams=1 params=8 returns=0
+  - deposit_coin vis=Friend entry=False tparams=1 params=7 returns=0
+  - deposit_on_behalf_of_user vis=Friend entry=False tparams=1 params=8 returns=0
+  - deposit_with_account_cap vis=Friend entry=False tparams=1 params=6 returns=0
+  - flash_loan_with_account_cap vis=Public entry=False tparams=1 params=4 returns=2
+  - flash_loan_with_ctx vis=Public entry=False tparams=1 params=4 returns=2
+  - flash_repay_with_account_cap vis=Public entry=False tparams=1 params=6 returns=1
+  - flash_repay_with_ctx vis=Public entry=False tparams=1 params=6 returns=1
+  - liquidation vis=Friend entry=False tparams=2 params=11 returns=2
+  - liquidation_call vis=Public entry=True tparams=2 params=12 returns=0
+  - liquidation_non_entry vis=Friend entry=False tparams=2 params=10 returns=2
+  - repay vis=Public entry=True tparams=1 params=8 returns=0
+  - repay_coin vis=Friend entry=False tparams=1 params=8 returns=1
+  - repay_on_behalf_of_user vis=Friend entry=False tparams=1 params=9 returns=1
+  - repay_with_account_cap vis=Friend entry=False tparams=1 params=7 returns=1
+  - withdraw vis=Public entry=True tparams=1 params=9 returns=0
+  - withdraw_coin vis=Friend entry=False tparams=1 params=7 returns=1
+  - withdraw_with_account_cap vis=Friend entry=False tparams=1 params=7 returns=1
+## module logic
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::flash_loan, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::lending
+- functions: 22
+  - entries: 0 | publics: 14
+  - calculate_avg_ltv vis=Public entry=False tparams=0 params=4 returns=1
+  - calculate_avg_threshold vis=Public entry=False tparams=0 params=4 returns=1
+  - cumulate_to_supply_index vis=Friend entry=False tparams=0 params=3 returns=0
+  - dynamic_liquidation_threshold vis=Public entry=False tparams=0 params=4 returns=1
+  - execute_borrow vis=Friend entry=False tparams=1 params=6 returns=0
+  - execute_deposit vis=Friend entry=False tparams=1 params=5 returns=0
+  - execute_liquidate vis=Friend entry=False tparams=2 params=7 returns=3
+  - execute_repay vis=Friend entry=False tparams=1 params=6 returns=1
+  - execute_withdraw vis=Friend entry=False tparams=1 params=6 returns=1
+  - is_collateral vis=Public entry=False tparams=0 params=3 returns=1
+  - is_health vis=Public entry=False tparams=0 params=4 returns=1
+  - is_loan vis=Public entry=False tparams=0 params=3 returns=1
+  - update_interest_rate vis=Friend entry=False tparams=0 params=2 returns=0
+  - update_state_of_all vis=Friend entry=False tparams=0 params=2 returns=0
+  - user_collateral_balance vis=Public entry=False tparams=0 params=3 returns=1
+  - user_collateral_value vis=Public entry=False tparams=0 params=5 returns=1
+  - user_health_collateral_value vis=Public entry=False tparams=0 params=4 returns=1
+  - user_health_factor vis=Public entry=False tparams=0 params=4 returns=1
+  - user_health_factor_batch vis=Public entry=False tparams=0 params=4 returns=1
+  - user_health_loan_value vis=Public entry=False tparams=0 params=4 returns=1
+  - user_loan_balance vis=Public entry=False tparams=0 params=3 returns=1
+  - user_loan_value vis=Public entry=False tparams=0 params=5 returns=1
+## module manage
+- functions: 19
+  - entries: 0 | publics: 19
+  - create_flash_loan_asset vis=Public entry=False tparams=1 params=10 returns=0
+  - create_flash_loan_config vis=Public entry=False tparams=0 params=2 returns=0
+  - create_incentive_v3 vis=Public entry=False tparams=0 params=2 returns=0
+  - create_incentive_v3_pool vis=Public entry=False tparams=1 params=5 returns=0
+  - create_incentive_v3_reward_fund vis=Public entry=False tparams=1 params=2 returns=0
+  - create_incentive_v3_rule vis=Public entry=False tparams=2 params=5 returns=0
+  - deposit_incentive_v3_reward_fund vis=Public entry=False tparams=1 params=5 returns=0
+  - disable_incentive_v3_by_rule_id vis=Public entry=False tparams=1 params=4 returns=0
+  - enable_incentive_v3_by_rule_id vis=Public entry=False tparams=1 params=4 returns=0
+  - incentive_v3_version_migrate vis=Public entry=False tparams=0 params=2 returns=0
+  - set_flash_loan_asset_max vis=Public entry=False tparams=1 params=3 returns=0
+  - set_flash_loan_asset_min vis=Public entry=False tparams=1 params=3 returns=0
+  - set_flash_loan_asset_rate_to_supplier vis=Public entry=False tparams=1 params=3 returns=0
+  - set_flash_loan_asset_rate_to_treasury vis=Public entry=False tparams=1 params=3 returns=0
+  - set_incentive_v3_borrow_fee_rate vis=Public entry=False tparams=0 params=4 returns=0
+  - set_incentive_v3_max_reward_rate_by_rule_id vis=Public entry=False tparams=1 params=5 returns=0
+  - set_incentive_v3_reward_rate_by_rule_id vis=Public entry=False tparams=1 params=8 returns=0
+  - withdraw_borrow_fee vis=Public entry=False tparams=1 params=5 returns=0
+  - withdraw_incentive_v3_reward_fund vis=Public entry=False tparams=1 params=5 returns=0
+## module pool
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::flash_loan, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::lending, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::storage
+- functions: 13
+  - entries: 0 | publics: 6
+  - convert_amount vis=Public entry=False tparams=0 params=3 returns=1
+  - create_pool vis=Friend entry=False tparams=1 params=3 returns=0
+  - deposit vis=Friend entry=False tparams=1 params=3 returns=0
+  - deposit_balance vis=Friend entry=False tparams=1 params=3 returns=0
+  - deposit_treasury vis=Friend entry=False tparams=1 params=2 returns=0
+  - get_coin_decimal vis=Public entry=False tparams=1 params=1 returns=1
+  - normal_amount vis=Public entry=False tparams=1 params=2 returns=1
+  - uid vis=Public entry=False tparams=1 params=1 returns=1
+  - unnormal_amount vis=Public entry=False tparams=1 params=2 returns=1
+  - withdraw vis=Friend entry=False tparams=1 params=4 returns=0
+  - withdraw_balance vis=Friend entry=False tparams=1 params=3 returns=1
+  - withdraw_reserve_balance vis=Friend entry=False tparams=1 params=5 returns=0
+  - withdraw_treasury vis=Public entry=False tparams=1 params=5 returns=0
+## module ray_math
+- functions: 10
+  - entries: 0 | publics: 10
+  - half_ray vis=Public entry=False tparams=0 params=0 returns=1
+  - half_wad vis=Public entry=False tparams=0 params=0 returns=1
+  - ray vis=Public entry=False tparams=0 params=0 returns=1
+  - ray_div vis=Public entry=False tparams=0 params=2 returns=1
+  - ray_mul vis=Public entry=False tparams=0 params=2 returns=1
+  - ray_to_wad vis=Public entry=False tparams=0 params=1 returns=1
+  - wad vis=Public entry=False tparams=0 params=0 returns=1
+  - wad_div vis=Public entry=False tparams=0 params=2 returns=1
+  - wad_mul vis=Public entry=False tparams=0 params=2 returns=1
+  - wad_to_ray vis=Public entry=False tparams=0 params=1 returns=1
+## module safe_math
+- functions: 6
+  - entries: 0 | publics: 6
+  - add vis=Public entry=False tparams=0 params=2 returns=1
+  - div vis=Public entry=False tparams=0 params=2 returns=1
+  - min vis=Public entry=False tparams=0 params=2 returns=1
+  - mod vis=Public entry=False tparams=0 params=2 returns=1
+  - mul vis=Public entry=False tparams=0 params=2 returns=1
+  - sub vis=Public entry=False tparams=0 params=2 returns=1
+## module storage
+- friends: 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::flash_loan, 0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca::logic
+- functions: 52
+  - entries: 3 | publics: 38
+  - decrease_borrow_balance vis=Friend entry=False tparams=0 params=4 returns=0
+  - decrease_supply_balance vis=Friend entry=False tparams=0 params=4 returns=0
+  - decrease_total_supply_balance vis=Friend entry=False tparams=0 params=3 returns=0
+  - destory_user vis=Public entry=False tparams=0 params=2 returns=0
+  - get_asset_ltv vis=Public entry=False tparams=0 params=2 returns=1
+  - get_borrow_cap_ceiling_ratio vis=Public entry=False tparams=0 params=2 returns=1
+  - get_borrow_rate_factors vis=Public entry=False tparams=0 params=2 returns=5
+  - get_coin_type vis=Public entry=False tparams=0 params=2 returns=1
+  - get_current_rate vis=Public entry=False tparams=0 params=2 returns=2
+  - get_index vis=Public entry=False tparams=0 params=2 returns=2
+  - get_last_update_timestamp vis=Public entry=False tparams=0 params=2 returns=1
+  - get_liquidation_factors vis=Public entry=False tparams=0 params=2 returns=3
+  - get_oracle_id vis=Public entry=False tparams=0 params=2 returns=1
+  - get_reserve_for_testing vis=Public entry=False tparams=0 params=2 returns=1
+  - get_reserves_count vis=Public entry=False tparams=0 params=1 returns=1
+  - get_supply_cap_ceiling vis=Public entry=False tparams=0 params=2 returns=1
+  - get_total_supply vis=Public entry=False tparams=0 params=2 returns=2
+  - get_treasury_balance vis=Public entry=False tparams=0 params=2 returns=1
+  - get_treasury_factor vis=Public entry=False tparams=0 params=2 returns=1
+  - get_user_assets vis=Public entry=False tparams=0 params=2 returns=2
+  - get_user_balance vis=Public entry=False tparams=0 params=3 returns=2
+  - increase_balance_for_pool vis=Friend entry=False tparams=0 params=4 returns=0
+  - increase_borrow_balance vis=Friend entry=False tparams=0 params=4 returns=0
+  - increase_supply_balance vis=Friend entry=False tparams=0 params=4 returns=0
+  - increase_total_supply_balance vis=Friend entry=False tparams=0 params=3 returns=0
+  - increase_treasury_balance vis=Friend entry=False tparams=0 params=3 returns=0
+  - init_reserve vis=Public entry=True tparams=1 params=20 returns=0
+  - pause vis=Public entry=False tparams=0 params=1 returns=1
+  - remove_user_collaterals vis=Friend entry=False tparams=0 params=3 returns=0
+  - remove_user_loans vis=Friend entry=False tparams=0 params=3 returns=0
+  - reserve_validation vis=Public entry=False tparams=1 params=1 returns=0
+  - set_base_rate vis=Public entry=False tparams=0 params=4 returns=0
+  - set_borrow_cap vis=Public entry=False tparams=0 params=4 returns=0
+  - set_jump_rate_multiplier vis=Public entry=False tparams=0 params=4 returns=0
+  - set_liquidation_bonus vis=Public entry=False tparams=0 params=4 returns=0
+  - set_liquidation_ratio vis=Public entry=False tparams=0 params=4 returns=0
+  - set_liquidation_threshold vis=Public entry=False tparams=0 params=4 returns=0
+  - set_ltv vis=Public entry=False tparams=0 params=4 returns=0
+  - set_multiplier vis=Public entry=False tparams=0 params=4 returns=0
+  - set_optimal_utilization vis=Public entry=False tparams=0 params=4 returns=0
+  - set_pause vis=Public entry=True tparams=0 params=3 returns=0
+  - set_reserve_factor vis=Public entry=False tparams=0 params=4 returns=0
+  - set_supply_cap vis=Public entry=False tparams=0 params=4 returns=0
+  - set_treasury_factor vis=Public entry=False tparams=0 params=4 returns=0
+  - update_interest_rate vis=Friend entry=False tparams=0 params=4 returns=0
+  - update_state vis=Friend entry=False tparams=0 params=6 returns=0
+  - update_user_collaterals vis=Friend entry=False tparams=0 params=3 returns=0
+  - update_user_loans vis=Friend entry=False tparams=0 params=3 returns=0
+  - version_migrate vis=Public entry=True tparams=0 params=2 returns=0
+  - version_verification vis=Public entry=False tparams=0 params=1 returns=0
+  - when_not_paused vis=Public entry=False tparams=0 params=1 returns=0
+  - withdraw_treasury vis=Public entry=False tparams=1 params=8 returns=0
+## module utils
+- functions: 2
+  - entries: 0 | publics: 2
+  - split_coin vis=Public entry=False tparams=1 params=3 returns=1
+  - split_coin_to_balance vis=Public entry=False tparams=1 params=3 returns=1
+## module validation
+- functions: 5
+  - entries: 0 | publics: 5
+  - validate_borrow vis=Public entry=False tparams=1 params=3 returns=0
+  - validate_deposit vis=Public entry=False tparams=1 params=3 returns=0
+  - validate_liquidate vis=Public entry=False tparams=2 params=4 returns=0
+  - validate_repay vis=Public entry=False tparams=1 params=3 returns=0
+  - validate_withdraw vis=Public entry=False tparams=1 params=3 returns=0
+## module version
+- functions: 3
+  - entries: 0 | publics: 3
+  - next_version vis=Public entry=False tparams=0 params=0 returns=1
+  - pre_check_version vis=Public entry=False tparams=0 params=1 returns=0
+  - this_version vis=Public entry=False tparams=0 params=0 returns=1
+
+# oracle_normalized.json (1 modules)
+## module oracle
+- functions: 6
+  - entries: 5 | publics: 5
+  - get_token_price vis=Public entry=False tparams=0 params=3 returns=3
+  - register_token_price vis=Public entry=True tparams=0 params=6 returns=0
+  - set_update_interval vis=Public entry=True tparams=0 params=3 returns=0
+  - update_token_price vis=Public entry=True tparams=0 params=5 returns=0
+  - update_token_price_batch vis=Public entry=True tparams=0 params=5 returns=0
+  - version_migrate vis=Private entry=True tparams=0 params=2 returns=0
