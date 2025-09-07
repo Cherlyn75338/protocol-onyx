@@ -2363,3 +2363,123 @@
 - Rounding adversary: repay in many small chunks; liquidation edge rounding.
 - Oracle staleness: attempt borrow/withdraw with stale price; ensure rejection.
 - Flash underpay: attempt repay principal+fee-1; ensure abort.
+
+
+### lending::borrow<T>
+- Potential vulnerabilities: Accrual omission; stale price; utilization/rate overflow; rounding-up on borrowable; zero-supply division.
+- Impact category: Critical
+- Exploit path: 1) Ensure minimal collateral; 2) Borrow just before oracle update; 3) Indices not accrued -> underpriced debt; 4) Withdraw; 5) Oracle updates -> insolvency.
+- Attack scenario: Volatile market; oracle interval large; user passes health check due to stale high collateral price.
+- Suggested mitigation: Accrue-before-action; enforce price freshness (Clock delta<=interval); ceil debt, floor collateral; guard nonzero totals; cap per-tx borrow.
+
+
+### lending::withdraw<T>
+- Potential vulnerabilities: Health check rounding; stale oracle; decimals mismatch; no accrue-before-withdraw.
+- Impact category: Critical
+- Exploit path: 1) Deposit; 2) Price falls; 3) Withdraw using stale price/indices; 4) Position becomes insolvent post-update.
+- Attack scenario: Close-to-threshold account exploits downward rounding to pass.
+- Suggested mitigation: Accrue; check fresh price; floor collateral value; ceil debt; minimum residual collateral.
+
+
+### lending::liquidation_call<T0,T1>
+- Potential vulnerabilities: Close factor unchecked; seize calc rounding; seize more via decimals skew; price staleness.
+- Impact category: Critical
+- Exploit path: 1) Manipulate amount to trigger rounding in favor of liquidator; 2) Seize > intended; 3) Repeat across assets.
+- Attack scenario: Borrow asset 9 decimals, collateral 0 decimals -> precision asymmetry exploited.
+- Suggested mitigation: Multiply-then-divide in u256; cap close factor; floor seized collateral; ceil repay; align units explicitly.
+
+
+### lending::repay<T>
+- Potential vulnerabilities: Dust debt due to rounding; fee bypass via micro-repays; ordering with accrual.
+- Impact category: High
+- Exploit path: Automate many tiny repays so fee/interest rounds to zero each time.
+- Attack scenario: Bot splits coin to 1-unit pieces to amortize rounding losses to protocol.
+- Suggested mitigation: Minimum repay; aggregate rounding; accrue before repay; epsilon-forgive small residuals sent to treasury.
+
+
+### lending::deposit<T>
+- Potential vulnerabilities: Supply cap missing; decimals normalization errors; dust loss on splits.
+- Impact category: Medium
+- Exploit path: Deposit exceeds cap or normalizes incorrectly causing accounting drift.
+- Attack scenario: Asset with unusual decimals leads to over-credit of supply index.
+- Suggested mitigation: Enforce caps; normalize via metadata decimals; emit events and assert invariants.
+
+
+### storage::init_reserve<T>
+- Potential vulnerabilities: Unbounded parameters; zero divisors; mis-set indices; inconsistent scales.
+- Impact category: High
+- Exploit path: Initialize with base index 0 or denominator 0 -> later math aborts or mis-accrues.
+- Attack scenario: Owner sets liquidation_threshold < ltv or bonus < 1.
+- Suggested mitigation: Strict bounds; initialize indices to scale (e.g., 1e27); validate relations (ltv<threshold).
+
+
+### storage::set_*
+- Potential vulnerabilities: Param spikes; invariants broken; bypass via friend path.
+- Impact category: High
+- Exploit path: Set reserve_factor to 1 or liquidation_ratio extreme -> seize/interest math breaks.
+- Attack scenario: Admin error or compromised OwnerCap.
+- Suggested mitigation: Bounds checks; rate-limit changes; two-step commit; events.
+
+
+### storage::withdraw_treasury<T>
+- Potential vulnerabilities: PoolAdminCap gate but check against treasury balance rounding; event omission.
+- Impact category: High
+- Exploit path: Withdraw near balance boundary; rounding returns extra.
+- Attack scenario: Precision mismatch in treasury share computation.
+- Suggested mitigation: Ceil/floor consistently; assert conservation before/after.
+
+
+### oracle::update_token_price
+- Potential vulnerabilities: Feeder auth; freshness interval enforced; price>0; decimals bounds; batch length check.
+- Impact category: High
+- Exploit path: Feeder front-runs liquidation with absurd price if lack of bounds.
+- Attack scenario: Set price to near-zero; enable cheap liquidations.
+- Suggested mitigation: Clamp price; enforce min/max bounds; TWAP or observation window; events.
+
+
+### oracle::register_token_price / set_update_interval
+- Potential vulnerabilities: Admin-only but need interval sanity; per-asset decimals mismatch.
+- Impact category: High
+- Exploit path: Set large interval -> stale prices exploitable.
+- Attack scenario: Admin misconfig or compromised AdminCap.
+- Suggested mitigation: Upper bound intervals; require gradual changes; emit events.
+
+
+### ray_math/safe_math/calculator/dynamic_calculator
+- Potential vulnerabilities: Rounding mode inconsistent; overflow if not widened; utilization > 1; time delta overflow.
+- Impact category: High
+- Exploit path: Compute interest with divide-then-multiply causing loss; underflow aborts (DoS).
+- Attack scenario: Large compounding horizon; max U64 seconds.
+- Suggested mitigation: Multiply-then-divide in u256; clamp inputs; test boundaries.
+
+
+### flash_loan::*
+- Potential vulnerabilities: Underpayment by rounding; fee calc precision; config bounds.
+- Impact category: High
+- Exploit path: Return principal + fee - 1; if check uses floor, protocol loses.
+- Attack scenario: Rational fee produces fractional wei.
+- Suggested mitigation: Ceil fee; assert returned >= principal+fee; cap per-asset min/max.
+
+
+### incentive_v2/v3
+- Potential vulnerabilities: Index update ordering; claim rounding; rule table growth DoS.
+- Impact category: High
+- Exploit path: Claim before updating indices to over-claim.
+- Attack scenario: User cycles deposit/withdraw to farm rounding.
+- Suggested mitigation: Update indices before balance changes; min claim; cap rules.
+
+
+### pool::withdraw_treasury<T>
+- Potential vulnerabilities: AdminCap gate but precision in convert_amount/unnormal_amount.
+- Impact category: Medium
+- Exploit path: Decimals conversion overflow/rounding leads to off-by-one.
+- Attack scenario: 0-decimal asset conversion.
+- Suggested mitigation: Use u256; explicit rounding; test low-decimal assets.
+
+
+### logic::*
+- Potential vulnerabilities: Health factor math: floor on collateral, ceil on debt; stale price risk.
+- Impact category: High
+- Exploit path: is_health returns true due to rounding; borrow proceeds.
+- Attack scenario: Edge thresholds.
+- Suggested mitigation: Conservative rounding; require fresh price.
