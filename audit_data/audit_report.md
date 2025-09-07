@@ -2273,3 +2273,93 @@
 - Public entry fun oracle::set_update_interval(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleAdminCap,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U64) -> ()
 - Public entry fun oracle::update_token_price(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleFeederCap,&0x0x2::clock::Clock,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U8,U256) -> ()
 - Public entry fun oracle::update_token_price_batch(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleFeederCap,&0x0x2::clock::Clock,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,vector<U8>,vector<U256>) -> ()
+
+
+## Detailed adversarial findings (initial pass)
+
+### lending::borrow<T>
+- Potential vulnerabilities: No explicit accrue() call in signature; risk of using stale indices. Oracle freshness/decimals not visible at interface; borrow amount may be checked via validation::validate_borrow, but rounding direction on collateral check unknown. U256 math must multiply-then-divide; utilization/rate bounds must be enforced; division-by-zero if totalSupply=0 when computing rates.
+- Impact category: Critical
+- Exploit path: Borrow immediately after rate spike without accrual, extract underpriced debt; or use manipulated/stale price via oracle if stale not enforced; edge-case borrow when pool totals are zero causing abort/DoS.
+- Attack scenario: Price Oracle reports old high collateral price; user calls borrow with minimal collateral; post-price update system insolvent. Alternatively, rounding-up borrowable in ltv calc allows extracting more than intended.
+- Suggested mitigation: Force accrue before state-changing ops; enforce oracle freshness and decimals alignment; check nonzero denominators; cap per-tx borrow with close factor-like constraint under volatility; unit tests for rounding.
+
+### lending::repay<T>
+- Potential vulnerabilities: Rounding could leave dust debt unrepayable; repay before/after accrue ordering matters for interest consistency; repay of zero or tiny amounts may bypass fee floors.
+- Impact category: High
+- Exploit path: Split many tiny repays to avoid interest/fees rounding; grief by leaving user in perpetual small debt due to rounding up on interest index.
+- Suggested mitigation: Minimum repay amount; deterministic rounding mode; accrue before repay; sweep dust to treasury or zero-out under epsilon with event.
+
+### lending::withdraw<T>
+- Potential vulnerabilities: Health check rounding direction could allow withdrawing to unsafe levels; price scale mismatch; not accruing before withdraw allows using outdated lower debt.
+- Impact category: Critical
+- Exploit path: Front-run price drop with withdraw using stale price; rounding-down collateral value check passes marginally.
+- Suggested mitigation: Accrue; strict oracle staleness; use conservative rounding (ceil on debt, floor on collateral).
+
+### lending::deposit<T>
+- Potential vulnerabilities: Supply cap enforcement; coin split/merge dust; decimals normalization to pool units; reentrancy via friend modules is low in Move but ensure no callbacks.
+- Impact category: Medium
+- Suggested mitigation: Enforce supply caps; normalize amount with coin metadata decimals; emit events post-state.
+
+### lending::liquidation_call<T0,T1>
+- Potential vulnerabilities: Close factor enforcement; liquidation incentive rounding; seize calculation precision; price staleness. Partial repay rounding could allow value extraction or block liquidation.
+- Impact category: Critical
+- Exploit path: Liquidator cherry-picks rounding to seize more collateral; or borrow token with low decimals causing mis-seize.
+- Suggested mitigation: Multiply-then-divide with u256; ceil repay needed; floor seized collateral; verify incentive bounds; TWAP/staleness checks.
+
+### storage::init_reserve<T>
+- Potential vulnerabilities: Many parameters; require strict bounds (ltv<threshold<1, bonus>1, caps nonzero); decimals from CoinMetadata must align. Risk of division-by-zero setting base indices to zero.
+- Impact category: High
+- Suggested mitigation: Validate ranges; initialize indices to 1e27-style scales; emit versioned event.
+
+### storage::set_* (all setters)
+- Potential vulnerabilities: OwnerCap required but also check monotonicity and safe ranges; sudden param spikes can brick positions or open insolvency.
+- Impact category: High
+- Suggested mitigation: Parameter guards (e.g., 0 <= reserve_factor < 1e18, liquidation_ratio within band); timelock or 2-step change; eventing.
+
+### storage::set_pause
+- Potential vulnerabilities: Pause semantics must not block debt repayment or liquidation; ensure only non-critical paths are paused.
+- Impact category: High
+- Suggested mitigation: Allow repay/liquidation while paused; emit event.
+
+### oracle::update_token_price / update_token_price_batch
+- Potential vulnerabilities: FeederCap auth required; enforce minimum update interval using Clock; ensure price>0, decimals within bounds, monotonic timestamp. Batch vector lengths must match. Overflow in scaling.
+- Impact category: High
+- Suggested mitigation: Require now - last_update >= interval; reject zero/absurd price; cap exponent; emit event per asset; safe u256 math.
+
+### oracle::get_token_price
+- Potential vulnerabilities: Returns Bool, U256, U8; callers must reject stale/invalid; ensure unit documentation matches lending expectations.
+- Impact category: High
+- Suggested mitigation: Provide explicit status enum; expose last_updated timestamp; document scale.
+
+### ray_math/safe_math/calculator/dynamic_calculator
+- Potential vulnerabilities: Ensure wad/ray constants are correct; ray_mul/div widen and round toward zero consistently; compounded interest uses exp approximation with bounds; utilization cannot exceed 1e18; no division by zero when total_supply=0.
+- Impact category: High
+- Suggested mitigation: Use u256 widening; multiply-then-divide; clamp inputs; tests for boundary conditions and large time deltas.
+
+### flash_loan::*
+- Potential vulnerabilities: Rate to supplier/treasury computation precision; enforce repay in same tx; max/min per asset; receipt parsing integrity; prevent underpayment via rounding.
+- Impact category: High
+- Suggested mitigation: Use exact-fee formula with ceil; assert returned balance >= principal+fee; cap amounts.
+
+### incentive_v2/v3 entries
+- Potential vulnerabilities: Reward index update order relative to deposit/withdraw/borrow/repay; per-rule caps; freeze logic; double-claim via account cap paths; batch processing gas/DoS.
+- Impact category: High
+- Suggested mitigation: Update indices before balance changes; non-reentrant pattern; event on claim; cap rules and pools length; min claim amount.
+
+## Protocol invariants and red-flags
+- Sum(user_supply) = total_supply + treasury_reserve (per asset).
+- Sum(user_debt) = total_debt (per asset); indices monotonic.
+- Accrual: debt and indices never decrease with time.
+- Oracle: prices fresh (now - last_update <= interval); price>0; decimals consistent.
+- Liquidation: close factor <= 1, incentive within bounds, rounding favors safety.
+- Access control: all setters gated by OwnerCap/PoolAdminCap; no friend-only bypass grants unintended powers.
+- Loops: no unbounded iteration over user-controlled vectors/tables on shared objects.
+
+## Suggested concrete tests
+- Extreme decimals: asset with 0/2/6/9 decimals across deposit/borrow/liquidation.
+- Zero totals: borrow/supply rate when total supply or debt is zero.
+- Large time jumps: accrual with 0, 1, 1e6 seconds; check bounds.
+- Rounding adversary: repay in many small chunks; liquidation edge rounding.
+- Oracle staleness: attempt borrow/withdraw with stale price; ensure rejection.
+- Flash underpay: attempt repay principal+fee-1; ensure abort.
