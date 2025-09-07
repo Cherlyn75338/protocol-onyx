@@ -1,0 +1,19 @@
+{
+  "oracle": {
+    "entry": [
+      "register_token_price",
+      "set_update_interval",
+      "update_token_price",
+      "update_token_price_batch",
+      "version_migrate"
+    ],
+    "public": [
+      "get_token_price",
+      "register_token_price",
+      "set_update_interval",
+      "update_token_price",
+      "update_token_price_batch"
+    ],
+    "friend": []
+  }
+}
