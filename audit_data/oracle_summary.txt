@@ -1,0 +1,9 @@
+# module oracle
+- Public fun oracle::get_token_price(&0x0x2::clock::Clock,&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U8) -> (Bool,U256,U8)
+- Public entry fun oracle::register_token_price(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleAdminCap,&0x0x2::clock::Clock,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U8,U256,U8) -> ()
+- Public entry fun oracle::set_update_interval(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleAdminCap,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U64) -> ()
+- Public entry fun oracle::update_token_price(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleFeederCap,&0x0x2::clock::Clock,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,U8,U256) -> ()
+- Public entry fun oracle::update_token_price_batch(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleFeederCap,&0x0x2::clock::Clock,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle,vector<U8>,vector<U256>) -> ()
+- Private entry fun oracle::version_migrate(&0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::OracleAdminCap,&mut 0x0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f::oracle::PriceOracle) -> ()
+- struct oracle::OracleAdminCap abilities={'abilities': ['Store', 'Key']}
+- struct oracle::OracleFeederCap abilities={'abilities': ['Store', 'Key']}
