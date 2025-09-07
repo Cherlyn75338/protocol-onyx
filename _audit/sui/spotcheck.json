@@ -1,13 +1,14 @@
 {
-  "rpc": "https://fullnode.mainnet.sui.io:443",
+  "rpc": "https://sui-mainnet-endpoint.blockvision.org/",
   "lending_package": "0xd899cf7d2b5db716bd2cf55599fb0d5ee38a3061e7b6bb6eebf73fa5bc4c81ca",
   "oracle_package": "0xca441b44943c16be0e6e23c5a955bb971537ea3289ae8016fbf33fffe1fd210f",
   "suix_available": false,
-  "chain_time_ms": 1757254263586,
+  "chain_time_ms": null,
   "price_oracles": [],
   "storages": [],
   "pools": [],
   "notes": [
+    "Failed to fetch latest checkpoint time: RPC failed sui_getCheckpoint: HTTP Error 429: Too Many Requests\nRPC URL: https://sui-mainnet-endpoint.blockvision.org/",
     "RPC endpoint does not support suix_* indexer methods. Set SUI_RPC_URL to an indexer-enabled RPC (e.g., RPC provider with suix support)."
   ]
 }
