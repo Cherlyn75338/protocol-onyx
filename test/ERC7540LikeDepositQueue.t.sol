@@ -526,4 +526,92 @@ contract ERC7540LikeDepositQueueTest is TestHelpers {
         assertEq(depositQueue.getDepositRequest(1).controller, address(0));
         assertEq(depositQueue.getDepositRequest(3).controller, address(0));
     }
+
+    function test_executeDepositRequests_staleSharePrice_mints_different_shares() public {
+        // Setup asset and rate
+        uint8 assetDecimals = 6;
+        address asset = address(new MockERC20(assetDecimals));
+        vm.prank(admin);
+        depositQueue.setAsset({_asset: asset});
+
+        uint128 rate = 4e18; // 1 asset : 4 value units
+        vm.prank(admin);
+        valuationHandler.setAssetRate(
+            ValuationHandler.AssetRateInput({asset: asset, rate: rate, expiry: uint40(block.timestamp + 1 days)})
+        );
+
+        // Prepare two controllers with same asset amount
+        address controllerStale = makeAddr("controllerStale");
+        address controllerFresh = makeAddr("controllerFresh");
+        uint256 assetsAmount = 10_000_000; // 10 units (6 decimals)
+        deal(asset, controllerStale, assetsAmount, true);
+        deal(asset, controllerFresh, assetsAmount, true);
+        vm.prank(controllerStale);
+        IERC20(asset).approve(address(depositQueue), type(uint256).max);
+        vm.prank(controllerFresh);
+        IERC20(asset).approve(address(depositQueue), type(uint256).max);
+
+        // Set stale share price = 1e18 at old timestamp
+        uint256 t0 = 1000;
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 1e18, _timestamp: t0});
+
+        // Request and execute deposit for stale price
+        vm.prank(controllerStale);
+        uint256 idStale = depositQueue.requestDeposit({_assets: assetsAmount, _controller: controllerStale, _owner: controllerStale});
+        vm.prank(admin);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = idStale;
+        depositQueue.executeDepositRequests({_requestIds: ids});
+
+        uint256 mintedStale = shares.balanceOf(controllerStale);
+
+        // Update to fresh share price = 2e18 at newer timestamp
+        uint256 t1 = t0 + 1 days;
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 2e18, _timestamp: t1});
+
+        // Request and execute deposit for fresh price
+        vm.prank(controllerFresh);
+        uint256 idFresh = depositQueue.requestDeposit({_assets: assetsAmount, _controller: controllerFresh, _owner: controllerFresh});
+        ids[0] = idFresh;
+        vm.prank(admin);
+        depositQueue.executeDepositRequests({_requestIds: ids});
+
+        uint256 mintedFresh = shares.balanceOf(controllerFresh);
+
+        // With price doubled, minted shares should be exactly halved
+        assertEq(mintedStale, mintedFresh * 2);
+    }
+
+    function test_executeDepositRequests_revert_ZeroShares_due_to_rounding() public {
+        // Very small rate so value rounds down to 0
+        uint8 assetDecimals = 6;
+        address asset = address(new MockERC20(assetDecimals));
+        vm.prank(admin);
+        depositQueue.setAsset({_asset: asset});
+
+        uint128 tinyRate = 1; // 1 wei of value per 1 asset unit
+        vm.prank(admin);
+        valuationHandler.setAssetRate(
+            ValuationHandler.AssetRateInput({asset: asset, rate: tinyRate, expiry: uint40(block.timestamp + 1 days)})
+        );
+
+        // sharePrice (any) — use 1e18
+        ValuationHandlerHarness(address(valuationHandler)).harness_setLastShareValue({_shareValue: 1e18, _timestamp: block.timestamp});
+
+        address controller = makeAddr("controller");
+        uint256 assetsAmount = 1; // minimal unit
+        deal(asset, controller, assetsAmount, true);
+        vm.prank(controller);
+        IERC20(asset).approve(address(depositQueue), type(uint256).max);
+
+        vm.prank(controller);
+        uint256 id = depositQueue.requestDeposit({_assets: assetsAmount, _controller: controller, _owner: controller});
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = id;
+
+        vm.expectRevert(ERC7540LikeDepositQueue.ERC7540LikeDepositQueue__ExecuteDepositRequests__ZeroShares.selector);
+        vm.prank(admin);
+        depositQueue.executeDepositRequests({_requestIds: ids});
+    }
 }

@@ -228,4 +228,40 @@ contract ContinuousFlatRatePerformanceFeeTrackerTest is TestHelpers {
         assertEq(valueDue, _expectedValueDue);
         assertEq(performanceFeeTracker.getHighWaterMark(), _expectedHwm);
     }
+
+    function test_hwm_reset_then_rebound_increases_fee_vs_baseline() public {
+        // Initial shares supply and setup
+        uint256 sharesSupply = 10_000;
+        increaseSharesSupply({_shares: address(shares), _increaseAmount: sharesSupply});
+
+        uint16 rate = 1_000; // 10%
+
+        // Baseline: start with share price = 1e18
+        shares_mockSharePrice({_shares: address(shares), _sharePrice: VALUE_ASSET_PRECISION, _timestamp: block.timestamp});
+        vm.prank(admin);
+        performanceFeeTracker.resetHighWaterMark();
+
+        // Scenario A: price drops to 0.5e18 then rebounds to 2e18 without resetting HWM
+        vm.prank(admin);
+        performanceFeeTracker.setRate(rate);
+        uint256 netValueA = 2e18 * sharesSupply; // value per share = 2e18
+        vm.prank(mockFeeHandler);
+        uint256 valueDueA = performanceFeeTracker.settlePerformanceFee({_netValue: netValueA});
+
+        // Scenario B: reset HWM at low price (0.5e18), then rebound to 2e18
+        // Reset HWM to 0.5e18
+        shares_mockSharePrice({_shares: address(shares), _sharePrice: 0.5e18, _timestamp: block.timestamp});
+        vm.prank(admin);
+        performanceFeeTracker.resetHighWaterMark();
+
+        // Rebound to 2e18 and settle again
+        vm.prank(admin);
+        performanceFeeTracker.setRate(rate);
+        uint256 netValueB = 2e18 * sharesSupply;
+        vm.prank(mockFeeHandler);
+        uint256 valueDueB = performanceFeeTracker.settlePerformanceFee({_netValue: netValueB});
+
+        // Resetting at the low should produce a strictly greater fee than baseline
+        assertGt(valueDueB, valueDueA);
+    }
 }

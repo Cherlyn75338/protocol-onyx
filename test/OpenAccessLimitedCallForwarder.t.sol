@@ -193,6 +193,35 @@ contract OpenAccessLimitedCallForwarderTest is TestHelpers {
         assertEq(address(callTarget1).balance, value1);
         assertEq(address(callTarget2).balance, value2);
     }
+
+    function test_executeCalls_eth_value_mismatch_leftover_and_insufficient() public {
+        CallTarget callTarget = new CallTarget();
+
+        // register call
+        vm.prank(owner);
+        callForwarder.addCall({_target: address(callTarget), _selector: CallTarget.foo.selector});
+
+        // Prepare call with value but send less msg.value (insufficient forwarding)
+        uint256 valueRequired = 1 ether;
+        bytes memory callData = abi.encodeWithSelector(CallTarget.foo.selector, 1);
+        OpenAccessLimitedCallForwarder.Call[] memory calls = new OpenAccessLimitedCallForwarder.Call[](1);
+        calls[0] = OpenAccessLimitedCallForwarder.Call({target: address(callTarget), data: callData, value: valueRequired});
+
+        // Seed caller with less than required msg.value
+        address caller = makeAddr("caller");
+        vm.deal(caller, 0.5 ether);
+        vm.prank(caller);
+        // This will revert from Address.functionCallWithValue due to insufficient balance/value
+        vm.expectRevert();
+        callForwarder.executeCalls{value: 0.5 ether}(calls);
+
+        // Seed forwarder itself with ETH, send zero msg.value, expect leftover ETH to be used silently
+        vm.deal(address(callForwarder), valueRequired);
+        vm.prank(caller);
+        // Call should succeed and forward valueRequired from forwarder's balance
+        callForwarder.executeCalls{value: 0}(calls);
+        assertEq(address(callTarget).balance, valueRequired);
+    }
 }
 
 contract CallTarget {
